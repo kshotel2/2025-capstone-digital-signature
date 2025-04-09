@@ -32,14 +32,15 @@ int main() {
 
     //communication
     while(1){
-        printf("메시지 입력 (종료: exit): ");
-        fgets(buffer, BUFFER_SIZE, stdin);
-        if (strncmp(buffer, "exit", 4) == 0) break;
 
-        write(sockfd, buffer, strlen(buffer));
-        memset(buffer, 0, BUFFER_SIZE);
-        read(sockfd, buffer, BUFFER_SIZE - 1);
-        printf("서버 응답: %s\n", buffer);
+	    
+        // fgets(buffer, BUFFER_SIZE, stdin);
+        // if (strncmp(buffer, "exit", 4) == 0) break;
+
+        // write(sockfd, buffer, strlen(buffer));
+        // memset(buffer, 0, BUFFER_SIZE);
+        // read(sockfd, buffer, BUFFER_SIZE - 1);
+        // printf("서버 응답: %s\n", buffer);
     }
     close(sockfd);
     return 0;
