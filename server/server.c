@@ -53,8 +53,13 @@ int main() {
 			sscanf(buffer, "%s", command);	//명령어 command에 옮김
 
 			printf("클라이언트로부터 명령 수신: %s\n", command);
-
-			if(!strcmp(command, "put")){
+			
+			if(!strcmp(command, "exit")){ //exit 명령어
+				printf("클라이언트 연결 종료\n");
+				close(client_fd);
+				break;
+			}
+			else if(!strcmp(command, "put")){
 				int check = 0;
 				char *file_data;
 
