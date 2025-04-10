@@ -66,7 +66,7 @@ int main() {
             if((fd = open(filename, O_RDONLY)) == -1){//파일 open
                 printf("파일이 없습니다.\n");
                 continue;
-            };
+            }
 
             strcpy(buf, "put ");
             strcat(buf, filename);
