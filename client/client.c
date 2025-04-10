@@ -1,4 +1,4 @@
-// tcp_client.c
+//client
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +7,6 @@
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
-
 
 #define SERVER_IP "127.0.0.1"
 #define PORT 12345
