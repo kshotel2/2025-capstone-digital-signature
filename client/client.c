@@ -1,4 +1,4 @@
-// tcp_client.c
+//client.c
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +7,6 @@
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
-
 
 #define SERVER_IP "127.0.0.1"
 #define PORT 12345
@@ -21,10 +20,7 @@ int main() {
 
     // 1. 소켓 생성
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd == -1) {
-        perror("socket");
-        exit(1);
-    }
+    if(sockfd == -1){perror("socket"); exit(1);}
 
     // 2. 서버 주소 설정
     memset(&server_addr, 0, sizeof(server_addr));
@@ -34,10 +30,7 @@ int main() {
 
     // 3. 서버에 연결
     if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
-        perror("connect");
-        close(sockfd);
-        exit(1);
-    }
+        perror("connect"); close(sockfd); exit(1);}
     printf("서버에 연결됨\n");
 
     // 4. 데이터 송수신
@@ -47,9 +40,8 @@ int main() {
         buffer[strcspn(buffer, "\n")] = 0;  
 
         if (strncmp(buffer, "exit", 4) == 0) break;
-        
+			
         else if(strncmp(buffer, "put", 3) == 0){ //put 명령어
-            
             printf("업로드 할 파일명을 입력해주세요 :");
             if (fgets(filename, sizeof(filename), stdin) == NULL) {
                 printf("입력 오류!\n");
@@ -78,15 +70,15 @@ int main() {
             //파일 크기 
             
             stat(filename, &obj);
-            file_size = obj.st_size;
+            file_size = obj.st_size;	//stat 명령를 통해 파일 사이즈 받기
             printf("파일 크기 : %d\n", file_size);
 
             send(sockfd, &file_size, sizeof(int), 0); //파일 크기 전송
 
-            read(fd, file_buf, file_size);
+            read(fd, file_buf, file_size);	//파일 읽고
             send(sockfd, file_buf, file_size, 0); //파일 전송
             
-            recv(sockfd, &status, sizeof(int), 0);
+            recv(sockfd, &status, sizeof(int), 0);	//서버에서 받았는지 확인 메세지 수신신
             if(status){//업로드 성공여부 판단
                 printf("업로드 완료\n");
             }else{
@@ -95,7 +87,6 @@ int main() {
 
             close(fd);
         }//end put
-            
 
         /*
         write(sockfd, buffer, strlen(buffer));
@@ -103,9 +94,8 @@ int main() {
         read(sockfd, buffer, BUFFER_SIZE - 1);
         printf("서버 응답: %s\n", buffer);
         */
-    }
-
-    // 5. 종료
+	}
+    //종료
     close(sockfd);
     return 0;
  
