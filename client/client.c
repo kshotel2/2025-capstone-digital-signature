@@ -29,28 +29,28 @@ int main() {
 	inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr);
 
     // 3. 서버에 연결
-    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
+    if(connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1){
         perror("connect"); close(sockfd); exit(1);}
     printf("서버에 연결됨\n");
 
     // 4. 데이터 송수신
-    while (1) {
+    while(1){
         printf("명령어 입력 [put, exit](종료: exit): ");
         fgets(buffer, BUFFER_SIZE, stdin);
         buffer[strcspn(buffer, "\n")] = 0;  
 
-        if (strncmp(buffer, "exit", 4) == 0) break;
+        if(strncmp(buffer, "exit", 4) == 0) break;
 			
         else if(strncmp(buffer, "put", 3) == 0){ //put 명령어
             printf("업로드 할 파일명을 입력해주세요 :");
-            if (fgets(filename, sizeof(filename), stdin) == NULL) {
-                printf("입력 오류!\n");
-                continue;
-            }
+            if(fgets(filename, sizeof(filename), stdin) == NULL){
+		    printf("입력 오류!\n");
+		    continue;
+	    }
             filename[strcspn(filename, "\n")] = 0;  // 엔터 제거
             
             printf("filename: %s\n", filename);
-            if (strlen(filename) == 0) {
+            if(strlen(filename) == 0){
                 printf("파일명이 비어있습니다. 다시 입력해주세요.\n");
                 continue;
             }
