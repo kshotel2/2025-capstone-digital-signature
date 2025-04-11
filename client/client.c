@@ -43,14 +43,13 @@ int main() {
 		send(sockfd, buffer, 5, 0);
 		printf("연결 종료\n");
 		break;
-		}
-			
+		}	
         else if(strncmp(buffer, "put", 3) == 0){ //put 명령어
             printf("업로드 할 파일명을 입력해주세요 :");
             if(fgets(filename, sizeof(filename), stdin) == NULL){
-		    printf("입력 오류!\n");
-		    continue;
-	    }
+		    	printf("입력 오류!\n");
+		    	continue;
+	    	}
             filename[strcspn(filename, "\n")] = 0;  // 엔터 제거
             
             printf("filename: %s\n", filename);
