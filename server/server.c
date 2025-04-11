@@ -53,12 +53,12 @@ int main() {
 
 			printf("클라이언트로부터 명령 수신: %s\n", command);
 			
-			if(!strcmp(command, "exit")){ //exit 명령어
+			if(strcmp(command, "exit") == 0){ //exit 명령어
 				printf("클라이언트 연결 종료\n");
 				close(client_fd);
 				break;
 			}
-			else if(!strcmp(command, "put")){
+			else if(strcmp(command, "put") == 0){
 				int check = 0;
 				char *file_data;
 
