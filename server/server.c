@@ -23,8 +23,7 @@ int main() {
 
     // 2. 서버 주소 설정
     memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET; 				
-    //inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr);
+    server_addr.sin_family = AF_INET; 					//inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr);
 	server_addr.sin_addr.s_addr = INADDR_ANY;		
     server_addr.sin_port = htons(PORT);
 
@@ -84,13 +83,6 @@ int main() {
 
 				send(client_fd, &check, sizeof(int), 0);		//write 성공 여부를 client 송신
 			}
-			/*
-        	int bytes_read = read(client_fd, buffer, BUFFER_SIZE - 1);
-			if (bytes_read <= 0) break;
-        	printf("수신: %s\n", buffer);
-        	// 클라이언트에게 그대로 되돌려보냄 (에코)
-        	write(client_fd, buffer, bytes_read);
-			*/	
     	}	
 	}
     // 7. 종료
@@ -98,3 +90,10 @@ int main() {
     close(server_fd);
     return 0;
 }
+/*
+        	int bytes_read = read(client_fd, buffer, BUFFER_SIZE - 1);
+			if (bytes_read <= 0) break;
+        	printf("수신: %s\n", buffer);
+        	// 클라이언트에게 그대로 되돌려보냄 (에코)
+        	write(client_fd, buffer, bytes_read);
+			*/	
