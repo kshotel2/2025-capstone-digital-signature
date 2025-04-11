@@ -81,7 +81,7 @@ int main() {
             read(fd, file_buf, file_size);	//파일 읽고
             send(sockfd, file_buf, file_size, 0); //파일 전송
             
-            recv(sockfd, &status, sizeof(int), 0);	//서버에서 받았는지 확인 메세지 수신신
+            recv(sockfd, &status, sizeof(int), 0);	//서버에서 받았는지 확인 메세지 수신
             if(status){//업로드 성공여부 판단
                 printf("업로드 완료\n");
             }else{
@@ -89,18 +89,15 @@ int main() {
             }
 
             close(fd);
-        }//end put
-
-        /*
+        }//end put  
+	}
+    //종료
+    close(sockfd);
+    return 0;
+}
+	 /*
         write(sockfd, buffer, strlen(buffer));
         memset(buffer, 0, BUFFER_SIZE);
         read(sockfd, buffer, BUFFER_SIZE - 1);
         printf("서버 응답: %s\n", buffer);
         */
-	}
-    //종료
-    close(sockfd);
-    return 0;
- 
-}
-	
