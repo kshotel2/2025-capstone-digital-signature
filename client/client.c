@@ -39,12 +39,12 @@ int main() {
         fgets(buffer, BUFFER_SIZE, stdin);
         buffer[strcspn(buffer, "\n")] = 0;  
 
-        if(strncmp(buffer, "exit", 4) == 0){ //exit 명령어
+        if(strcmp(buffer, "exit") == 0){ //exit 명령어
 		send(sockfd, buffer, 5, 0);
 		printf("연결 종료\n");
 		break;
 		}	
-        else if(strncmp(buffer, "put", 3) == 0){ //put 명령어
+        else if(strcmp(buffer, "put") == 0){ //put 명령어
             printf("업로드 할 파일명을 입력해주세요 :");
             if(fgets(filename, sizeof(filename), stdin) == NULL){
 		    	printf("입력 오류!\n");
