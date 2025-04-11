@@ -43,7 +43,7 @@ int main() {
 		send(sockfd, buffer, 5, 0);
 		printf("연결 종료\n");
 		break;
-	}
+		}
 			
         else if(strncmp(buffer, "put", 3) == 0){ //put 명령어
             printf("업로드 할 파일명을 입력해주세요 :");
