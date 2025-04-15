@@ -10,7 +10,7 @@
 
 #define SERVER_IP "127.0.0.1"
 #define PORT 12345
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 512
 #define MAXLINE 256
 int main() {
     struct stat obj;
@@ -45,6 +45,8 @@ int main() {
 			break;
 		}	
         else if(strcmp(buffer, "put") == 0){ //put 명령어
+            int bytes_send = 0;
+
             printf("업로드 할 파일명을 입력해주세요 :");
             if(fgets(filename, sizeof(filename), stdin) == NULL){
 		    	printf("입력 오류!\n");
@@ -71,24 +73,24 @@ int main() {
             send(sockfd, buf, BUFFER_SIZE, 0);//명령어 전송
             
             //파일 크기 
-            
             stat(filename, &obj);
             file_size = obj.st_size;	//stat 명령를 통해 파일 사이즈 받기
             printf("파일 크기 : %d\n", file_size);
 
             send(sockfd, &file_size, sizeof(int), 0); //파일 크기 전송
-
-            read(fd, file_buf, file_size);	//파일 읽고
-            send(sockfd, file_buf, file_size, 0); //파일 전송
             
+            memset(file_buf, 0x00, BUFFER_SIZE);
+            while((bytes_send = read(fd, file_buf, BUFFER_SIZE)) >0){
+                send(sockfd, file_buf, bytes_send, 0); //파일 전송
+            }
+            close(fd);
+
             recv(sockfd, &status, sizeof(int), 0);	//서버에서 받았는지 확인 메세지 수신
             if(status){//업로드 성공여부 판단
                 printf("업로드 완료\n");
             }else{
                 printf("업로드 실패\n");
             }
-
-            close(fd);
         }//end put  
 	}
     //종료

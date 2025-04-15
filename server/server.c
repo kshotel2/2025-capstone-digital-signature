@@ -9,13 +9,13 @@
 #include <arpa/inet.h>
 
 #define PORT 12345
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 512
 //#define SERVER_IP "127.0.0.1"
 int main() {
     int server_fd, client_fd, fd, file_size;
     struct sockaddr_in server_addr, client_addr;
     socklen_t client_len;
-	char buffer[BUFFER_SIZE], command[5], filename[256], buf[BUFFER_SIZE];
+	char buffer[BUFFER_SIZE], command[5], filename[256], file_buf[BUFFER_SIZE];
 
   	// 1. 소켓 생성
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -59,29 +59,55 @@ int main() {
 				break;
 			}
 			else if(strcmp(command, "put") == 0){
-				int check = 0;
-				char *file_data;
+				int check, bytes_recv, bytes_left= 0;
+				int success = 1;
+				char file_data[BUFFER_SIZE];
+				memset(file_data, 0x00, BUFFER_SIZE);
 
 				sscanf(buffer + strlen(command), "%s", filename); //command 이후 filename에 포인팅
 				printf("filename: %s\n", filename);
 				while(1){
 					fd = open(filename, O_CREAT | O_EXCL | O_WRONLY, 0666);	
-					if(fd == -1)
-						sprintf(filename + strlen(filename), "_1");
+					if(fd == -1){
+						sprintf(filename + strlen(filename), "_1");}
 					else
 						break;
 				}
 
-				recv(client_fd, &file_size, sizeof(int), 0);	//클라이언트에서 수행한 명령의 출력의 길이를 받음
-				file_data = malloc(file_size);					//사이즈 만큼 동적할당
+				recv(client_fd, &file_size, sizeof(int), 0);	//클라이언트에서 수행한 파일의 크기 수신
+				bytes_left = file_size;
 
-				recv(client_fd, buf, file_size, 0);				//클라이언트에서 명령 수행 결과를 받아옴
-				check = write(fd, buf, file_size);				//위에서 연 파일에 write
-				printf("%s save success\n", filename);			
+				printf("데이터 수신 시작\n");
+				memset(file_buf, 0x00, BUFFER_SIZE);
+				while(bytes_left > 0){ //클라이언트애서 받은 파일 크기만큼 반복문수행
+
+					bytes_recv = recv(client_fd, file_buf, BUFFER_SIZE, 0); //클라이언트에서 받은 파일 데이터 크기 bytes_recv에 저장
+					check = write(fd, file_buf, bytes_recv);				//위에서 연 파일에 write
+
+					if(check < 0){
+						perror("파일 쓰기 오류 발생: ");
+						success = 0;
+						break;
+					}
+
+					bytes_left -= bytes_recv; //수신한 파일의 크기에서 recv한 데이터 크기만큼 빼서 남은 파일 크기 계산
+				}
+				
+				if(bytes_recv < 0){
+					perror("파일 수신 오류 발생: ");
+					success = 0;
+				}
+
 				close(fd);
-				free(file_data);
+				printf("데이터 수신 끝\n");
 
-				send(client_fd, &check, sizeof(int), 0);		//write 성공 여부를 client 송신
+				if(success){
+					printf("%s save success\n", filename);
+				}else{
+					printf("%s save fail\n", filename);
+				}
+			
+				send(client_fd, &success, sizeof(int), 0);		//write 성공 여부를 client 송신
 			}
     	}	
 	}
