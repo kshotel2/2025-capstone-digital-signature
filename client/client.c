@@ -1,17 +1,6 @@
 //client.c
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <fcntl.h>
-#include <arpa/inet.h>
+#include "common.h"
 
-#define SERVER_IP "127.0.0.1"
-#define PORT 12345
-#define BUFFER_SIZE 512
-#define MAXLINE 256
 int main() {
     struct stat obj;
     int sockfd, fd, file_size, status;
@@ -81,6 +70,9 @@ int main() {
             
             memset(file_buf, 0x00, BUFFER_SIZE);
             while((bytes_send = read(fd, file_buf, BUFFER_SIZE)) >0){
+
+                hashFunction(file_buf, bytes_send);
+                
                 send(sockfd, file_buf, bytes_send, 0); //파일 전송
             }
             close(fd);
