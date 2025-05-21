@@ -73,15 +73,23 @@ int main() {
             
             memset(file_buf, 0x00, BUFFER_SIZE);
             while((bytes_send = read(fd, file_buf, BUFFER_SIZE)) >0){
+                
+                signOut = NULL;
+                signOutLen = 0;
 
-                hashFunction(file_buf, bytes_send);
-     
                 printf("서명시작\n");
-                ecdsa_sign(file_buf, bytes_send, &signOut, &signOutLen);
+                ecdsa_sign(file_buf, bytes_send, &signOut, &signOutLen); //서명 동작
                 printf("서명끝 (%zu 바이트)\n",signOutLen);
-
+            
+                printf("파일전송\n");
+                send(sockfd, &bytes_send, sizeof(int), 0); //읽은 파일 크기 전송 (중요!)
                 send(sockfd, file_buf, bytes_send, 0); //파일 전송
+                printf("파일전송 끝\n");
 
+                send(sockfd, &signOutLen, sizeof(signOutLen), 0); //서명 길이 전송
+                
+                send(sockfd, signOut, signOutLen, 0); //파일에 대한 서명값 전송
+               
             }
             close(fd);
 
@@ -97,9 +105,4 @@ int main() {
     close(sockfd);
     return 0;
 }
-	 /*
-        write(sockfd, buffer, strlen(buffer));
-        memset(buffer, 0, BUFFER_SIZE);
-        read(sockfd, buffer, BUFFER_SIZE - 1);
-        printf("서버 응답: %s\n", buffer);
-        */
+
