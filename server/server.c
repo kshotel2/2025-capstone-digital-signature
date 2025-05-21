@@ -1,12 +1,6 @@
 //server
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <fcntl.h>
-#include <arpa/inet.h>
+
+#include "common.h"
 
 #define PORT 12345
 #define BUFFER_SIZE 512
@@ -15,7 +9,7 @@ int main() {
     int server_fd, client_fd, fd, file_size;
     struct sockaddr_in server_addr, client_addr;
     socklen_t client_len;
-	char buffer[BUFFER_SIZE], command[5], filename[256], file_buf[BUFFER_SIZE];
+	char buffer[BUFFER_SIZE], command[5], filename[256], file_buf[BUFFER_SIZE], sign_buff[100];
 
   	// 1. 소켓 생성
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -61,6 +55,7 @@ int main() {
 			else if(strcmp(command, "put") == 0){
 				int check, bytes_recv, bytes_left= 0;
 				int success = 1;
+				size_t signLen;
 				char file_data[BUFFER_SIZE];
 				memset(file_data, 0x00, BUFFER_SIZE);
 
@@ -78,33 +73,58 @@ int main() {
 				bytes_left = file_size;
 
 				printf("데이터 수신 시작\n");
-				memset(file_buf, 0x00, BUFFER_SIZE);
+
 				while(bytes_left > 0){ //클라이언트애서 받은 파일 크기만큼 반복문수행
+					memset(file_buf, 0x00, BUFFER_SIZE);
+					memset(sign_buff, 0x00, 100);
+                	signLen = 0;
 
-					bytes_recv = recv(client_fd, file_buf, BUFFER_SIZE, 0); //클라이언트에서 받은 파일 데이터 크기 bytes_recv에 저장
-					check = write(fd, file_buf, bytes_recv);				//위에서 연 파일에 write
+					printf("파일 전송 받음\n");
+					recv(client_fd, &bytes_recv, sizeof(int), 0); //클라이언트에서 읽은 파일 크기 (중요!)
+					recv(client_fd, file_buf, bytes_recv, 0); //클라이언트에서 받은 파일 데이터 크기 bytes_recv에 저장
+					printf("파일 크기 %d\n", bytes_recv);
 
+					printf("===[서명 수신 준비]===\n");
+					recv(client_fd, &signLen, sizeof(signLen), 0); //디지털 서명 길이
+					printf("수신된 signLen = %zu\n", signLen);
+					
+					int a = recv(client_fd, sign_buff, signLen, 0); //디지털 서명 받아 저장
+					printf("서명 크기 %d\n", a);
+
+					if(ecdsaVerify(file_buf, bytes_recv, sign_buff, signLen)){ //서명 검증
+						printf("verify success\n");
+						check = write(fd, file_buf, bytes_recv);				
+					}else{
+						printf("verify fail\n");
+						success = 0;
+						//open한 파일 삭제 코드 추가 예정
+					}
+		
 					if(check < 0){
 						perror("파일 쓰기 오류 발생: ");
 						success = 0;
+						//open한 파일 삭제 코드 추가 예정
 						break;
 					}
 
 					bytes_left -= bytes_recv; //수신한 파일의 크기에서 recv한 데이터 크기만큼 빼서 남은 파일 크기 계산
+					
 				}
 				
 				if(bytes_recv < 0){
 					perror("파일 수신 오류 발생: ");
+					//open한 파일 삭제 코드 추가 예정
 					success = 0;
 				}
 
 				close(fd);
 				printf("데이터 수신 끝\n");
-
+				printf("success: %d\n",success);
 				if(success){
 					printf("%s save success\n", filename);
 				}else{
 					printf("%s save fail\n", filename);
+					//open한 파일 삭제 코드 추가 예정
 				}
 			
 				send(client_fd, &success, sizeof(int), 0);		//write 성공 여부를 client 송신
@@ -116,10 +136,4 @@ int main() {
     close(server_fd);
     return 0;
 }
-/*
-        	int bytes_read = read(client_fd, buffer, BUFFER_SIZE - 1);
-			if (bytes_read <= 0) break;
-        	printf("수신: %s\n", buffer);
-        	// 클라이언트에게 그대로 되돌려보냄 (에코)
-        	write(client_fd, buffer, bytes_read);
-			*/	
+

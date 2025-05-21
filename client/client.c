@@ -1,17 +1,6 @@
 //client.c
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <fcntl.h>
-#include <arpa/inet.h>
+#include "common.h"
 
-#define SERVER_IP "127.0.0.1"
-#define PORT 12345
-#define BUFFER_SIZE 512
-#define MAXLINE 256
 int main() {
     struct stat obj;
     int sockfd, fd, file_size, status;
@@ -45,6 +34,9 @@ int main() {
 			break;
 		}	
         else if(strcmp(buffer, "put") == 0){ //put 명령어
+            unsigned char *signOut;
+            size_t signOutLen;
+
             int bytes_send = 0;
 
             printf("업로드 할 파일명을 입력해주세요 :");
@@ -81,7 +73,23 @@ int main() {
             
             memset(file_buf, 0x00, BUFFER_SIZE);
             while((bytes_send = read(fd, file_buf, BUFFER_SIZE)) >0){
+                
+                signOut = NULL;
+                signOutLen = 0;
+
+                printf("서명시작\n");
+                ecdsa_sign(file_buf, bytes_send, &signOut, &signOutLen); //서명 동작
+                printf("서명끝 (%zu 바이트)\n",signOutLen);
+            
+                printf("파일전송\n");
+                send(sockfd, &bytes_send, sizeof(int), 0); //읽은 파일 크기 전송 (중요!)
                 send(sockfd, file_buf, bytes_send, 0); //파일 전송
+                printf("파일전송 끝\n");
+
+                send(sockfd, &signOutLen, sizeof(signOutLen), 0); //서명 길이 전송
+                
+                send(sockfd, signOut, signOutLen, 0); //파일에 대한 서명값 전송
+               
             }
             close(fd);
 
@@ -97,9 +105,4 @@ int main() {
     close(sockfd);
     return 0;
 }
-	 /*
-        write(sockfd, buffer, strlen(buffer));
-        memset(buffer, 0, BUFFER_SIZE);
-        read(sockfd, buffer, BUFFER_SIZE - 1);
-        printf("서버 응답: %s\n", buffer);
-        */
+
