@@ -34,6 +34,9 @@ int main() {
 			break;
 		}	
         else if(strcmp(buffer, "put") == 0){ //put 명령어
+            unsigned char *signOut;
+            size_t signOutLen;
+
             int bytes_send = 0;
 
             printf("업로드 할 파일명을 입력해주세요 :");
@@ -72,8 +75,13 @@ int main() {
             while((bytes_send = read(fd, file_buf, BUFFER_SIZE)) >0){
 
                 hashFunction(file_buf, bytes_send);
-                
+     
+                printf("서명시작\n");
+                ecdsa_sign(file_buf, bytes_send, &signOut, &signOutLen);
+                printf("서명끝 (%zu 바이트)\n",signOutLen);
+
                 send(sockfd, file_buf, bytes_send, 0); //파일 전송
+
             }
             close(fd);
 
