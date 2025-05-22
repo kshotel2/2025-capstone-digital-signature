@@ -36,8 +36,7 @@ int main() {
         else if(strcmp(buffer, "put") == 0){ //put 명령어
             unsigned char *signOut;
             size_t signOutLen;
-
-            int bytes_send = 0;
+            int bytes_send, total_len = 0;
 
             printf("업로드 할 파일명을 입력해주세요 :");
             if(fgets(filename, sizeof(filename), stdin) == NULL){
@@ -60,44 +59,70 @@ int main() {
             strcpy(buf, "put ");
             strcat(buf, filename);
             
-            printf("명령어 조합 완료: %s\n", buf); 
-            printf("명령어 전송 시작\n");
+            //printf("명령어 조합 완료: %s\n", buf); 
+            //printf("명령어 전송 시작\n");
             send(sockfd, buf, BUFFER_SIZE, 0);//명령어 전송
             
             //파일 크기 
             stat(filename, &obj);
             file_size = obj.st_size;	//stat 명령를 통해 파일 사이즈 받기
-            printf("파일 크기 : %d\n", file_size);
+            printf("업로드 파일 크기 : %d\n", file_size);
 
             send(sockfd, &file_size, sizeof(int), 0); //파일 크기 전송
-            
+
+            printf("========[업로드 시작]========\n");
+            printf("\n");
             memset(file_buf, 0x00, BUFFER_SIZE);
+            
             while((bytes_send = read(fd, file_buf, BUFFER_SIZE)) >0){
                 
                 signOut = NULL;
                 signOutLen = 0;
-
-                printf("서명시작\n");
+               
+                //printf("서명시작\n");
                 ecdsa_sign(file_buf, bytes_send, &signOut, &signOutLen); //서명 동작
-                printf("서명끝 (%zu 바이트)\n",signOutLen);
-            
-                printf("파일전송\n");
-                send(sockfd, &bytes_send, sizeof(int), 0); //읽은 파일 크기 전송 (중요!)
-                send(sockfd, file_buf, bytes_send, 0); //파일 전송
-                printf("파일전송 끝\n");
+
+                total_len = (int)signOutLen + bytes_send;
 
                 send(sockfd, &signOutLen, sizeof(signOutLen), 0); //서명 길이 전송
+                send(sockfd, &bytes_send, sizeof(int), 0); //읽은 파일 크기 전송 (중요!)
+                send(sockfd, &total_len, sizeof(int), 0); // 전송할 파일크기 + 디지털 서명 길이
+
+                //전송할 파일크기 + 디지털 서명 길이 
+                printf("    파일 길이: (%d) || 디지털 서명 길이: (%zu)\n", bytes_send, signOutLen);
+                printf("    총 패킷 길이 : %d\n", total_len);
+
+                //전송용 버퍼 동적 생성
+                unsigned char *send_buf = (unsigned char *)malloc(total_len);
+                if(send_buf == NULL) {
+                    perror("malloc failed");
+                    status = 0;
+                    break;
+                }
+                //데이터 결합 (파일데이터 + 디지털 서명)
+                memcpy(send_buf, file_buf, bytes_send);
+                memcpy(send_buf+bytes_send, signOut, signOutLen);
                 
-                send(sockfd, signOut, signOutLen, 0); //파일에 대한 서명값 전송
-               
+                int sent_bytes = send(sockfd, send_buf, total_len, 0);
+                if(sent_bytes != total_len){
+                    perror("send failed");
+                    status = 0;
+                    free(send_buf);
+                    break;
+                }
+                printf("\n");
+                printf("----------------------------\n");
+                free(send_buf);
+                
             }
             close(fd);
-
+            printf("\n");
+            
             recv(sockfd, &status, sizeof(int), 0);	//서버에서 받았는지 확인 메세지 수신
             if(status){//업로드 성공여부 판단
-                printf("업로드 완료\n");
+                printf("========[업로드 완료]========\n");
             }else{
-                printf("업로드 실패\n");
+                printf("========[업로드 실패]========\n");
             }
         }//end put  
 	}
