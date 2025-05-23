@@ -53,11 +53,11 @@ int main() {
 				break;
 			}
 			else if(strcmp(command, "put") == 0){
-				int check, bytes_recv, bytes_left= 0;
+				int check, file_len, bytes_left, total_len= 0;
 				int success = 1;
 				size_t signLen;
 				char file_data[BUFFER_SIZE];
-				memset(file_data, 0x00, BUFFER_SIZE);
+				memset(file_data, 0x00, BUFFER_SIZE);			
 
 				sscanf(buffer + strlen(command), "%s", filename); //command 이후 filename에 포인팅
 				printf("filename: %s\n", filename);
@@ -69,65 +69,88 @@ int main() {
 						break;
 				}
 
-				recv(client_fd, &file_size, sizeof(int), 0);	//클라이언트에서 수행한 파일의 크기 수신
+				printf("=======[데이터 수신 시작]=======\n");
+				printf("\n");
+
+				recv(client_fd, &file_size, sizeof(int), 0);	//파일의 전체 크기 수신
 				bytes_left = file_size;
-
-				printf("데이터 수신 시작\n");
-
+				
 				while(bytes_left > 0){ //클라이언트애서 받은 파일 크기만큼 반복문수행
 					memset(file_buf, 0x00, BUFFER_SIZE);
 					memset(sign_buff, 0x00, 100);
                 	signLen = 0;
+					total_len = 0;
 
-					printf("파일 전송 받음\n");
-					recv(client_fd, &bytes_recv, sizeof(int), 0); //클라이언트에서 읽은 파일 크기 (중요!)
-					recv(client_fd, file_buf, bytes_recv, 0); //클라이언트에서 받은 파일 데이터 크기 bytes_recv에 저장
-					printf("파일 크기 %d\n", bytes_recv);
-
-					printf("===[서명 수신 준비]===\n");
 					recv(client_fd, &signLen, sizeof(signLen), 0); //디지털 서명 길이
-					printf("수신된 signLen = %zu\n", signLen);
+					recv(client_fd, &file_len, sizeof(int), 0); //클라이언트에서 읽은 파일 크기 (중요!)
+					recv(client_fd, &total_len, sizeof(int), 0); //파일 + 디지털서명 길이 
 					
-					int a = recv(client_fd, sign_buff, signLen, 0); //디지털 서명 받아 저장
-					printf("서명 크기 %d\n", a);
+					printf("	파일 길이: (%d) || 디지털 서명 길이: (%zu)\n", file_len, signLen);
+                    printf("	총 패킷 길이 : %d\n", total_len);
 
-					if(ecdsaVerify(file_buf, bytes_recv, sign_buff, signLen)){ //서명 검증
-						printf("verify success\n");
-						check = write(fd, file_buf, bytes_recv);				
+					//수신용 버퍼 동적 생성
+                	unsigned char *recv_buf = (unsigned char *)malloc(total_len);
+                	if(recv_buf == NULL) {
+                   		perror("malloc failed");
+                    	success =0;
+                    	break;
+                	}
+
+					int recv_bytes = recv(client_fd, recv_buf, total_len, 0);	
+					if(recv_bytes != total_len){
+                    	perror("send failed");
+                   		success =0;
+                    	break;
+                	}
+
+					memcpy(file_buf, recv_buf, file_len);
+					memcpy(sign_buff, recv_buf + file_len, signLen);
+
+					printf("\n");
+					printf("----------[서명 검증]----------\n");
+					printf("\n");
+					if(ecdsaVerify(file_buf, file_len, sign_buff, signLen)){ //서명 검증
+						printf("	verify success\n");
+						check = write(fd, file_buf, file_len);				
 					}else{
-						printf("verify fail\n");
+						printf("	verify fail\n");
 						success = 0;
-						//open한 파일 삭제 코드 추가 예정
+						free(recv_buf);
+						break;
 					}
 		
 					if(check < 0){
 						perror("파일 쓰기 오류 발생: ");
 						success = 0;
-						//open한 파일 삭제 코드 추가 예정
+						free(recv_buf);
 						break;
 					}
 
-					bytes_left -= bytes_recv; //수신한 파일의 크기에서 recv한 데이터 크기만큼 빼서 남은 파일 크기 계산
-					
+					bytes_left -= file_len; //수신한 파일의 크기에서 recv한 데이터 크기만큼 빼서 남은 파일 크기 계산
+					free(recv_buf);
+
+					printf("\n");
+					printf("-------------------------------\n");
 				}
 				
-				if(bytes_recv < 0){
+				if(file_len < 0){
 					perror("파일 수신 오류 발생: ");
-					//open한 파일 삭제 코드 추가 예정
 					success = 0;
 				}
 
 				close(fd);
-				printf("데이터 수신 끝\n");
-				printf("success: %d\n",success);
+				
 				if(success){
 					printf("%s save success\n", filename);
 				}else{
 					printf("%s save fail\n", filename);
-					//open한 파일 삭제 코드 추가 예정
+					remove(filename);
 				}
-			
+
 				send(client_fd, &success, sizeof(int), 0);		//write 성공 여부를 client 송신
+
+				printf("\n");
+				printf("=======[데이터 수신 끝]=======\n");
 			}
     	}	
 	}
