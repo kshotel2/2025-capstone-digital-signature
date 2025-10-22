@@ -11,7 +11,7 @@ int clnt_to_serv(int sockfd){
     cert_get_pubkey(sockfd, &pub_key);
     // 4. 데이터 송수신
     while(1){
-        printf("명령어 입력 [put, get, pwd, cd, ls, client_pwd, client_cd, client_ls, exit](종료: exit): ");
+        printf("명령어 입력 [put, get, ls, client_ls, exit](종료: exit): ");
         fgets(buffer, BUFFER_SIZE, stdin);
         buffer[strcspn(buffer, "\n")] = 0;
 

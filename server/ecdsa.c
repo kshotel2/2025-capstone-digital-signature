@@ -2,7 +2,10 @@
 
 int ecdsa_sign(char *file_buf, int len, unsigned char **sign, size_t *sign_len){
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
-    
+    EVP_MD_CTX *tmp = EVP_MD_CTX_new(); //해쉬값 출력용
+
+    unsigned char digest[EVP_MAX_MD_SIZE];
+    unsigned int digest_len = 0;
     //개인키 가져오기
     FILE *fp = fopen("./server_info/server_priv_key.pem", "r");
     if(!fp){
@@ -16,7 +19,17 @@ int ecdsa_sign(char *file_buf, int len, unsigned char **sign, size_t *sign_len){
         fprintf(stderr, "개인 키 로딩 실패");
         return -12;
     }
+    /*해싱값 출력쪽*/
+    EVP_DigestInit_ex(tmp, EVP_sha256(), NULL);
+    EVP_DigestUpdate(tmp, file_buf, len);
+    EVP_DigestFinal_ex(tmp, digest, &digest_len);
 
+    printf("SHA-256 digest:\t");
+    for (unsigned int i = 0; i < digest_len; i++) {
+        printf("%02x", digest[i]);
+    }
+    printf("\n");
+    /*-----------------------------------------------------------*/
     //ctx 초기화
     if(EVP_DigestSignInit(ctx, NULL, MdName, NULL, pkey) != 1){
         fprintf(stderr, "DigestSignInit 실패");

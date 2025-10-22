@@ -10,7 +10,7 @@ int put_file(int sockfd){
 
     memset(full_path, 0x00, BUFFER_SIZE);
 
-    print_ls(); //파일 확인(현재 'file' 폴더만 확인 가능)
+    //print_ls(); //파일 확인(현재 'file' 폴더만 확인 가능)
     
     //파일명 입력 start
     printf("업로드 할 파일명을 입력해주세요 :");
@@ -191,12 +191,13 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
         memcpy(sign_buf, recv_buf + file_len, sign_len);
 
         printf("\n");
-        printf("[서명 검증]--->");
-
+        
         if(ecdsa_verify(file_buf, file_len, sign_buf, sign_len, pub_key)){ //서명 검증
+            printf("[서명 검증]--->");
             printf("\tverification success\n");
             check = write(fd, file_buf, file_len);	//검증 성공시 파일 데이터 write
         }else{
+            printf("[서명 검증]--->");
             printf("\tverification fail\n");
             success = 0;
             free(recv_buf);
@@ -437,12 +438,14 @@ int get_file_test(int sockfd, EVP_PKEY *pub_key){
         memcpy(sign_buf, recv_buf + file_len, sign_len);
 
         printf("\n");
-        printf("[서명 검증]--->");
+        
 
         if(ecdsa_verify(file_buf, file_len, sign_buf, sign_len, pub_key)){ //서명 검증
+            printf("[서명 검증]--->");
             printf("\tverification success\n");
             check = write(fd, file_buf, file_len);	//검증 성공시 파일 데이터 write
         }else{
+            printf("[서명 검증]--->");
             printf("\tverification fail\n");
             success = 0;
             free(recv_buf);
