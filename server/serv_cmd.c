@@ -63,12 +63,14 @@ int clnt_put(int client_fd, char *buffer, char *command, EVP_PKEY *pub_key){
         memcpy(sign_buff, recv_buf + file_len, sign_len);
 
         printf("\n");
-        printf("[서명 검증]--->");
+        
 
         if(ecdsa_verify(file_buf, file_len, sign_buff, sign_len, pub_key)){ //서명 검증
+            printf("[서명 검증]--->");
             printf("\tverification success\n");
             check = write(fd, file_buf, file_len);	//검증 성공시 파일 데이터 write
         }else{
+            printf("[서명 검증]--->");
             printf("\tverification fail\n");
             success = 0;
             free(recv_buf);
@@ -90,7 +92,7 @@ int clnt_put(int client_fd, char *buffer, char *command, EVP_PKEY *pub_key){
         //printf("\n");
         cnt++;
     }
-    
+    printf("\n");
     if(file_len < 0){
         perror("파일 수신 오류 발생: \n");
         success = 0;

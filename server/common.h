@@ -15,6 +15,7 @@
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
+#include <openssl/sha.h>
 
 #define MdName EVP_sha256()
 #define BUFFER_SIZE 512
