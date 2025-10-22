@@ -62,14 +62,14 @@ int clnt_put(int client_fd, char *buffer, char *command, EVP_PKEY *pub_key){
         memcpy(file_buf, recv_buf, file_len);
         memcpy(sign_buff, recv_buf + file_len, sign_len);
 
-        //printf("\n");
-        //printf("[서명 검증]--->");
+        printf("\n");
+        printf("[서명 검증]--->");
 
         if(ecdsa_verify(file_buf, file_len, sign_buff, sign_len, pub_key)){ //서명 검증
-            //printf("\tverify success\n");
+            printf("\tverification success\n");
             check = write(fd, file_buf, file_len);	//검증 성공시 파일 데이터 write
         }else{
-            printf("\tverify fail\n");
+            printf("\tverification fail\n");
             success = 0;
             free(recv_buf);
             break;
@@ -99,10 +99,10 @@ int clnt_put(int client_fd, char *buffer, char *command, EVP_PKEY *pub_key){
     close(fd);
     
     if(success){
-        //printf("%s save success\n", filename);
+        printf("%s / save success\n", filename);
     }else{
-        printf("%s save fail\n", filename);
-        remove(filename); //검증이 실패했거나 파일 write, 수신에 오류가 발생시 파일 삭제
+        printf("%s / save fail\n", filename);
+        remove(full_path); //검증이 실패했거나 파일 write, 수신에 오류가 발생시 파일 삭제
     }
 
     send(client_fd, &success, sizeof(int), 0);		//write 성공 여부를 client 송신
@@ -180,9 +180,9 @@ int clnt_get(int client_fd, char *buffer, char  *command){
 
     recv(client_fd, &status, sizeof(int), 0);	//서버에서 받았는지 확인 메세지 수신
     if(status){//업로드 성공여부 판단
-        //printf("========[업로드 완료]========\n\n");
+        printf("%s / upload success\n", filename);
     }else{
-        printf("========[%s 업로드 실패]========\n\n", filename);
+        printf("%s / upload fail\n", filename);
     }
 }
 
@@ -226,4 +226,87 @@ int ls(int client_fd){
 	}
 
 }
+
+int clnt_get_test(int client_fd, char *buffer, char  *command){
+    struct stat obj;
+    size_t sign_len;
+    int fd, test_fd, status, file_size, bytes_send, total_len;
+    char file_data[BUFFER_SIZE], filename[MAXLINE], full_path[BUFFER_SIZE], file_buf[BUFFER_SIZE], test_file_buf[BUFFER_SIZE];
+    unsigned char *sign;
+    total_len, bytes_send, status = 0;
+
+    memset(file_data, 0x00, BUFFER_SIZE);
+    memset(full_path, 0x00, BUFFER_SIZE);
     
+    sscanf(buffer + strlen(command), "%s", filename); //command 이후 filename에 포인팅
+    //printf("filename: %s\n", filename); //확인용 나중에 주석처리
+
+    snprintf(full_path, sizeof(full_path), "./file/%s", filename);
+    fd = open(full_path, O_RDONLY);
+
+    if(fd == -1){//파일 존재 여부
+        send(client_fd, &status, sizeof(int), 0); //요구한 파일이 없을 경우
+        return -1;
+    }else{
+        status = 1;
+        send(client_fd, &status, sizeof(int), 0);
+    }
+
+    stat(full_path, &obj);   //파일 크기
+    file_size = obj.st_size;	//stat 명령를 통해 파일 사이즈 받기
+    //printf("File_size: %d byte\n\n", file_size); //확인용
+
+    send(client_fd, &file_size, sizeof(int), 0); //파일 크기 전송
+
+    /*----------------fail test---------------------------------------*/
+    snprintf(full_path, sizeof(full_path), "./file/%s_test", filename);
+    test_fd = open(full_path, O_RDONLY);
+    /*----------------fail test---------------------------------------*/
+
+    while((bytes_send = read(fd, file_buf, BUFFER_SIZE)) >0){
+        //fail test
+        read(test_fd, test_file_buf, BUFFER_SIZE);
+        
+        Length_Info info; //파일 길이, 서명길이, 총길이 데이터를 저장할 구조체 선언
+        sign = NULL;
+        sign_len = 0;
+
+        ecdsa_sign(file_buf, bytes_send, &sign, &sign_len); //서명 동작
+
+        total_len = (int)sign_len + bytes_send;
+
+        info.sign_len = (int)sign_len;
+        info.file_len = bytes_send;
+        info.total_len = total_len;
+
+        send(client_fd, &info, sizeof(Length_Info), 0); //파일 길이, 서명길이, 총길이 데이터를 담은 구조체 send
+
+        unsigned char *send_buf = (unsigned char *)malloc(total_len);
+        if(send_buf == NULL) {
+            perror("malloc failed");
+            status = 0;
+            break;
+        }
+        //fail test
+        memcpy(send_buf, test_file_buf, bytes_send);
+        memcpy(send_buf+bytes_send, sign, sign_len);
+        
+        int sent_bytes = send(client_fd, send_buf, total_len, 0);
+        if(sent_bytes != total_len){
+            perror("send failed");
+            status = 0;
+            free(send_buf);
+            break;
+        }
+        free(send_buf);
+    }
+    close(fd);
+    close(test_fd);
+
+    recv(client_fd, &status, sizeof(int), 0);	//상태 수신
+    if(status){//업로드 성공여부 판단
+        printf("%s / upload success\n", filename);
+    }else{
+        printf("%s / upload fail\n", filename);
+    }
+}

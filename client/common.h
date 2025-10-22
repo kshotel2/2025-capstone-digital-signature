@@ -23,7 +23,9 @@
 int print_ls();
 int ls(int sockfd, char *buffer);
 int put_file(int sockfd);
+int put_file_test(int sockfd);
 int get_file(int sockfd, EVP_PKEY *pub_key);
+int get_file_test(int sockfd, EVP_PKEY *pub_key);
 int send_cert(int sockfd);
 int clnt_to_serv(int sockfd);
 int client_to_ca(int sockfd);
