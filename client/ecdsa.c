@@ -2,7 +2,11 @@
 
 int ecdsa_sign(char *file_buf, int len, unsigned char **sign, size_t *sign_len){
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
-    
+    //EVP_MD_CTX *tmp = EVP_MD_CTX_new(); //해쉬값 출력용
+
+    //unsigned char digest[EVP_MAX_MD_SIZE];
+    //unsigned int digest_len;
+
     //개인키 가져오기
     FILE *fp = fopen("./client_key/ec_priv_key.pem", "r");
     if(!fp){
@@ -17,19 +21,6 @@ int ecdsa_sign(char *file_buf, int len, unsigned char **sign, size_t *sign_len){
         return -12;
     }
    
-    /* 키 출력
-		BIO *bio = BIO_new(BIO_s_mem());
-   		PEM_write_bio_PUBKEY(bio, pkey);
-
-    	char *data;
-   		 long len2 = BIO_get_mem_data(bio, &data);
-
-    	// 문자열 출력
-    	printf("%.*s", (int)len2, data);
-
-    	BIO_free(bio);
-    */
-
     //ctx 초기화
     if(EVP_DigestSignInit(ctx, NULL, MdName, NULL, pkey) != 1){
         fprintf(stderr, "DigestSignInit 실패");
@@ -47,6 +38,15 @@ int ecdsa_sign(char *file_buf, int len, unsigned char **sign, size_t *sign_len){
 
     assert(EVP_DigestSignFinal(ctx, *sign, sign_len)); //EVP_DigestSignUpdate 기반으로 서명 결과를 sign에 저장 길이를 sign_len에 실제 사용된 바이트 수 반환
     
+    //EVP_DigestFinal_ex(tmp, digest, &digest_len);
+    /*
+    printf("서명에 사용된 해시값: ");
+    for(unsigned int i = 0; i < digest_len; i++){
+        printf("%02x", digest[i]);
+    }
+    printf("\n");
+*/
+  //  EVP_MD_CTX_free(tmp);
     EVP_MD_CTX_free(ctx);
     EVP_PKEY_free(pkey);
 }

@@ -108,6 +108,8 @@ void* handle_clnt(void *arg){
 				clnt_get(clnt_sock, buffer, command);
 			}else if(strcmp(command, "ls") == 0){
 				ls(clnt_sock);
+			}else if(strcmp(command, "testget") == 0){	//get 명령어
+				clnt_get_test(clnt_sock, buffer, command);
 			}
     	}
 		EVP_PKEY_free(pub_key);
