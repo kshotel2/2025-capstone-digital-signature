@@ -110,7 +110,8 @@ int put_file(int sockfd){
 }
 
 int get_file(int sockfd, EVP_PKEY *pub_key){
-    int fd, check, check_status, file_size, bytes_left, sign_len, total_len, file_len, cnt= 0;
+    int fd, check, check_status, file_size, bytes_left, total_len, file_len, cnt= 0;
+    size_t sign_len;
     int success = 1;
     char filename[MAXLINE], full_path[BUFFER_SIZE], buf[BUFFER_SIZE], file_buf[BUFFER_SIZE], sign_buf[100];
     
@@ -124,7 +125,7 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
     printf("\n");
 
     filename[strcspn(filename, "\n")] = 0;  // 엔터 제거
-
+   
     printf("File_name: %s\n", filename);//확인용
     if(strlen(filename) == 0){
         printf("파일명이 비어있습니다. 다시 입력해주세요.\n");
@@ -155,8 +156,15 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
 
     recv(sockfd, &file_size, sizeof(int), 0);	//파일의 전체 크기 수신
     bytes_left = file_size;
-
+    cnt = 1;
+    printf("File_size: %d bytes\n", file_size);
+    printf("\n");
+    printf("========[다운로드 시작]========\n");
+    printf("\n");
     while(bytes_left >0){
+        if(cnt != 1)
+            printf("-----------------------------\n\n");
+        printf("Fragment %d\n", cnt);
         Length_Info info;
         memset(file_buf, 0x00, BUFFER_SIZE);
         memset(sign_buf, 0x00, 100);
@@ -169,9 +177,7 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
         sign_len = info.sign_len;
         total_len = info.total_len;
 
-        //printf("\t파일 길이: (%d) || 디지털 서명 길이: (%zu)\n", file_len, sign_len);
-        //printf("\t총 패킷 길이: %d\n", total_len);
-
+        
         //수신용 버퍼 동적 생성
         unsigned char *recv_buf = (unsigned char *)malloc(total_len);
         if(recv_buf == NULL) {
@@ -203,6 +209,8 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
             free(recv_buf);
             break;
         }
+        printf("\t파일 길이: (%d) || 디지털 서명 길이: (%zu)\n", file_len, sign_len);
+        printf("\t총 패킷 길이: %d\n\n", total_len);
 
          if(check < 0){
             perror("파일 쓰기 오류 발생: \n");
@@ -215,7 +223,7 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
         free(recv_buf);
         cnt++;
     }
-
+    printf("\n");
     if(file_len < 0){
         perror("파일 수신 오류 발생: \n");
         success = 0;
@@ -224,12 +232,12 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
     close(fd);
     
     if(success){
-        printf("%s save success\n", filename);
+        printf("========[다운로드 완료]========\n\n");
     }else{
-        printf("%s save fail\n", filename);
+        printf("========[다운로드 실패]========\n\n");
         remove(full_path); //검증이 실패했거나 파일 write, 수신에 오류가 발생시 파일 삭제
     }
-
+    printf("\n");
     send(sockfd, &success, sizeof(int), 0);		//write 성공 여부를 client 송신
 
     return 1;
@@ -357,7 +365,8 @@ int put_file_test(int sockfd){
 }
 
 int get_file_test(int sockfd, EVP_PKEY *pub_key){
-    int fd, check, check_status, file_size, bytes_left, sign_len, total_len, file_len= 0;
+    size_t sign_len;
+    int fd, check, check_status, file_size, bytes_left, total_len, file_len= 0;
     int success = 1;
     char filename[MAXLINE], full_path[BUFFER_SIZE], buf[BUFFER_SIZE], file_buf[BUFFER_SIZE], sign_buf[100];
     
@@ -402,8 +411,15 @@ int get_file_test(int sockfd, EVP_PKEY *pub_key){
 
     recv(sockfd, &file_size, sizeof(int), 0);	//파일의 전체 크기 수신
     bytes_left = file_size;
-
+    printf("File_size: %d bytes\n", file_size);
+    printf("\n");
+    printf("========[다운로드 시작]========\n");
+    printf("\n");
+    int cnt = 1;
     while(bytes_left >0){
+        if(cnt != 1)
+            printf("-----------------------------\n\n");
+        printf("Fragment %d\n", cnt);
         Length_Info info;
         memset(file_buf, 0x00, BUFFER_SIZE);
         memset(sign_buf, 0x00, 100);
@@ -447,11 +463,13 @@ int get_file_test(int sockfd, EVP_PKEY *pub_key){
         }else{
             printf("[서명 검증]--->");
             printf("\tverification fail\n");
+            printf("\n");
             success = 0;
             free(recv_buf);
             break;
         }
-
+        printf("\t파일 길이: (%d) || 디지털 서명 길이: (%zu)\n", file_len, sign_len);
+        printf("\t총 패킷 길이: %d\n\n", total_len);
          if(check < 0){
             perror("파일 쓰기 오류 발생: \n");
             success = 0;
@@ -461,6 +479,7 @@ int get_file_test(int sockfd, EVP_PKEY *pub_key){
 
         bytes_left -= file_len; //수신한 파일의 크기에서 recv한 데이터 크기만큼 빼서 남은 파일 크기 계산
         free(recv_buf);
+        cnt++;
     }
 
     if(file_len < 0){
@@ -470,12 +489,13 @@ int get_file_test(int sockfd, EVP_PKEY *pub_key){
 
     close(fd);
     
-    if(success){
-        printf("%s save success\n", filename);
+   if(success){
+        printf("========[다운로드 완료]========\n\n");
     }else{
-        printf("%s save fail\n", filename);
+        printf("========[다운로드 실패]========\n\n");
         remove(full_path); //검증이 실패했거나 파일 write, 수신에 오류가 발생시 파일 삭제
     }
+    printf("\n");
 
     send(sockfd, &success, sizeof(int), 0);		//write 성공 여부를 client 송신
 

@@ -34,7 +34,7 @@ int send_cert(int sockfd){
 
     free(buf);
     X509_free(cert);
-    printf("인증서 전송됨 :: 인증서 길이 : %d\n", len);
+    //printf("인증서 전송됨 :: 인증서 길이 : %d\n", len);
     return 0;
 }
 
