@@ -97,6 +97,7 @@ int put_file(int sockfd){
             break;
         }
         free(send_buf);
+        sleep(1);
         cnt++;
     }
     close(fd);
