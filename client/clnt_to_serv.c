@@ -5,9 +5,9 @@ int clnt_to_serv(int sockfd){
     EVP_PKEY *pub_key = NULL;
 
      //인증서 전송
-    printf("----------------------------\n");
+   // printf("----------------------------\n");
     send_cert(sockfd);
-    printf("----------------------------\n");
+    //printf("----------------------------\n");
     cert_get_pubkey(sockfd, &pub_key);
     // 4. 데이터 송수신
     while(1){
