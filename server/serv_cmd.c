@@ -86,7 +86,7 @@ int clnt_put(int client_fd, char *buffer, char *command, EVP_PKEY *pub_key){
 
         bytes_left -= file_len; //수신한 파일의 크기에서 recv한 데이터 크기만큼 빼서 남은 파일 크기 계산
         free(recv_buf);
-
+        sleep(1);
         //printf("\n");
         //printf("--------------------------------\n");
         //printf("\n");

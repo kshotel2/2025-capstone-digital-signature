@@ -1,5 +1,5 @@
 .SUFFIXES : .c .o
-CFLAGS = -g -lcrypto -lssl
+CFLAGS = -g -lcrypto -lssl -pthread
 
 
 OBJS = server.o serv_cmd.o ecdsa.o ecdsaVerify.o get_pubkey.o send_certificate.o
