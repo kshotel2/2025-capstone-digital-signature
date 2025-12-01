@@ -1,5 +1,6 @@
 #include "common.h"
 
+//server <- client 파일 다운로드
 int clnt_put(int client_fd, char *buffer, char *command, EVP_PKEY *pub_key){
     int check, fd, file_len, bytes_left, file_size, total_len= 0;
     int success = 1;
@@ -73,24 +74,29 @@ int clnt_put(int client_fd, char *buffer, char *command, EVP_PKEY *pub_key){
             printf("[서명 검증]--->");
             printf("\tverification fail\n");
             success = 0;
-            free(recv_buf);
-            break;
         }
 
         if(check < 0){
             perror("파일 쓰기 오류 발생: \n");
             success = 0;
-            free(recv_buf);
-            break;
         }
 
         bytes_left -= file_len; //수신한 파일의 크기에서 recv한 데이터 크기만큼 빼서 남은 파일 크기 계산
         free(recv_buf);
-        sleep(1);
+        
         //printf("\n");
         //printf("--------------------------------\n");
         //printf("\n");
         cnt++;
+
+        //printf("success value : %d\n", success);
+        send(client_fd, &success, sizeof(int), 0); //fragment당 디지털 서명 검증에 성공하였는지 client에게 송신 0: 실패 1: 성공
+        sleep(1);
+
+         if(!success){
+            break;
+        }
+
     }
     printf("\n");
     if(file_len < 0){
@@ -107,12 +113,13 @@ int clnt_put(int client_fd, char *buffer, char *command, EVP_PKEY *pub_key){
         remove(full_path); //검증이 실패했거나 파일 write, 수신에 오류가 발생시 파일 삭제
     }
 
-    send(client_fd, &success, sizeof(int), 0);		//write 성공 여부를 client 송신
+    //send(client_fd, &success, sizeof(int), 0);		//write 성공 여부를 client 송신
 
     //printf("\n");
     //printf("=======[데이터 수신 끝]=========\n\n");
 }
 
+//clietn -> server 클라이언트에 있는 파일 다운로드
 int clnt_get(int client_fd, char *buffer, char  *command){
     struct stat obj;
     size_t sign_len;
@@ -173,10 +180,13 @@ int clnt_get(int client_fd, char *buffer, char  *command){
         if(sent_bytes != total_len){
             perror("send failed");
             status = 0;
-            free(send_buf);
-            break;
+            
         }
         free(send_buf);
+
+        recv(client_fd, &status, sizeof(int), 0);	//상태 수신
+        if(!status)
+            break;
     }
     close(fd);
 
@@ -229,6 +239,7 @@ int ls(int client_fd){
 
 }
 
+//fail test
 int clnt_get_test(int client_fd, char *buffer, char  *command){
     struct stat obj;
     size_t sign_len;
@@ -297,10 +308,11 @@ int clnt_get_test(int client_fd, char *buffer, char  *command){
         if(sent_bytes != total_len){
             perror("send failed");
             status = 0;
-            free(send_buf);
-            break;
         }
         free(send_buf);
+        recv(client_fd, &status, sizeof(int), 0);	//상태 수신
+        if(!status)
+            break;
     }
     close(fd);
     close(test_fd);

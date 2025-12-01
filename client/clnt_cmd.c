@@ -1,5 +1,6 @@
 #include "common.h"
 
+//client -> server 파일업로드
 int put_file(int sockfd){
     struct stat obj;
     size_t sign_len;
@@ -99,10 +100,16 @@ int put_file(int sockfd){
         free(send_buf);
         sleep(1);
         cnt++;
+
+        recv(sockfd, &status, sizeof(int), 0);//fragment당 디지털 서명 검증에 성공하였는지 서버에게서 수신 0: 실패 1: 성공
+        //printf("status value : %d\n", status);
+        if(!status){
+            break;
+        }
     }
     close(fd);
     
-    recv(sockfd, &status, sizeof(int), 0);	//서버에서 받았는지 확인 메세지 수신
+    
     if(status){//업로드 성공여부 판단
         printf("========[업로드 완료]========\n\n");
     }else{
@@ -110,7 +117,8 @@ int put_file(int sockfd){
     }
 }
 
-int get_file(int sockfd, EVP_PKEY *pub_key){
+//client <- server 서버에서 파일 다운로드
+int get_file(int sockfd, EVP_PKEY *pub_key){ 
     int fd, check, check_status, file_size, bytes_left, total_len, file_len, cnt= 0;
     size_t sign_len;
     int success = 1;
@@ -207,8 +215,6 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
             printf("[서명 검증]--->");
             printf("\tverification fail\n");
             success = 0;
-            free(recv_buf);
-            break;
         }
         printf("\t파일 길이: (%d) || 디지털 서명 길이: (%zu)\n", file_len, sign_len);
         printf("\t총 패킷 길이: %d\n\n", total_len);
@@ -216,13 +222,15 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
          if(check < 0){
             perror("파일 쓰기 오류 발생: \n");
             success = 0;
-            free(recv_buf);
-            break;
         }
 
         bytes_left -= file_len; //수신한 파일의 크기에서 recv한 데이터 크기만큼 빼서 남은 파일 크기 계산
         free(recv_buf);
         cnt++;
+
+        send(sockfd, &success, sizeof(int), 0);	
+        if(!success)
+            break;
     }
     printf("\n");
     if(file_len < 0){
@@ -245,11 +253,11 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
 }
 
 
-
+//파일 업로드 fail test 
 int put_file_test(int sockfd){
     struct stat obj;
     size_t sign_len;
-    int fd, test_fd, file_size, status;
+    int fd, test_fd, file_size, status = 1;
     int bytes_send, total_len = 0;
     char filename[MAXLINE], file_buf[BUFFER_SIZE], buf[BUFFER_SIZE], full_path[BUFFER_SIZE], test_file_buf[BUFFER_SIZE];
     unsigned char *sign;
@@ -353,16 +361,26 @@ int put_file_test(int sockfd){
         }
         free(send_buf);
         cnt++;
+
+        
+        recv(sockfd, &status, sizeof(int), 0);//fragment당 디지털 서명 검증에 성공하였는지 서버에게서 수신 0: 실패 1: 성공
+        //printf("status value : %d\n", status);
+        if(!status){
+            break;
+        }
     }
+
+    
     close(fd);
     close(test_fd);
     
-    recv(sockfd, &status, sizeof(int), 0);	//서버에서 받았는지 확인 메세지 수신
+    //recv(sockfd, &status, sizeof(int), 0);	//서버에서 받았는지 확인 메세지 수신
     if(status){//업로드 성공여부 판단
         printf("========[업로드 완료]========\n\n");
     }else{
         printf("========[업로드 실패]========\n\n");
     }
+    
 }
 
 int get_file_test(int sockfd, EVP_PKEY *pub_key){
@@ -464,23 +482,22 @@ int get_file_test(int sockfd, EVP_PKEY *pub_key){
         }else{
             printf("[서명 검증]--->");
             printf("\tverification fail\n");
-            printf("\n");
             success = 0;
-            free(recv_buf);
-            break;
         }
         printf("\t파일 길이: (%d) || 디지털 서명 길이: (%zu)\n", file_len, sign_len);
         printf("\t총 패킷 길이: %d\n\n", total_len);
          if(check < 0){
             perror("파일 쓰기 오류 발생: \n");
             success = 0;
-            free(recv_buf);
-            break;
         }
 
         bytes_left -= file_len; //수신한 파일의 크기에서 recv한 데이터 크기만큼 빼서 남은 파일 크기 계산
         free(recv_buf);
         cnt++;
+
+        send(sockfd, &success, sizeof(int), 0);	
+        if(!success)
+            break;
     }
 
     if(file_len < 0){

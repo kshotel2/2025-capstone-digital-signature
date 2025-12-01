@@ -20,7 +20,8 @@ int ecdsa_sign(char *file_buf, int len, unsigned char **sign, size_t *sign_len){
         fprintf(stderr, "개인 키 로딩 실패");
         return -12;
     }
-    /*해싱값 출력쪽*/
+    
+    /*해싱값 출력쪽 확인을 위해 출력 ecdsa에 영향 없음*/
     EVP_DigestInit_ex(tmp, EVP_sha256(), NULL);
     EVP_DigestUpdate(tmp, file_buf, len);
     EVP_DigestFinal_ex(tmp, digest, &digest_len);

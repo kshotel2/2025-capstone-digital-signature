@@ -20,6 +20,13 @@ int main() {
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if(server_fd == -1){perror("socket"); exit(1);}
 
+	//서버 종료시 사용했던 port넘버가 TIME_WAIT상태여도 bind가능한 옵션
+	int opt = 1;
+	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+    	perror("setsockopt");
+    	exit(1);
+	}
+
     // 2. 서버 주소 설정
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET; 					//inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr);
