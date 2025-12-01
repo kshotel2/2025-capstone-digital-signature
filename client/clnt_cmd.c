@@ -1,5 +1,6 @@
 #include "common.h"
 
+//client -> server 파일업로드
 int put_file(int sockfd){
     struct stat obj;
     size_t sign_len;
@@ -99,10 +100,16 @@ int put_file(int sockfd){
         free(send_buf);
         sleep(1);
         cnt++;
+
+        recv(sockfd, &status, sizeof(int), 0);//fragment당 디지털 서명 검증에 성공하였는지 서버에게서 수신 0: 실패 1: 성공
+        //printf("status value : %d\n", status);
+        if(!status){
+            break;
+        }
     }
     close(fd);
     
-    recv(sockfd, &status, sizeof(int), 0);	//서버에서 받았는지 확인 메세지 수신
+    
     if(status){//업로드 성공여부 판단
         printf("========[업로드 완료]========\n\n");
     }else{
@@ -110,7 +117,8 @@ int put_file(int sockfd){
     }
 }
 
-int get_file(int sockfd, EVP_PKEY *pub_key){
+//client <- server 서버에서 파일 다운로드
+int get_file(int sockfd, EVP_PKEY *pub_key){ 
     int fd, check, check_status, file_size, bytes_left, total_len, file_len, cnt= 0;
     size_t sign_len;
     int success = 1;
@@ -245,11 +253,11 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
 }
 
 
-
+//파일 업로드 fail test 
 int put_file_test(int sockfd){
     struct stat obj;
     size_t sign_len;
-    int fd, test_fd, file_size, status;
+    int fd, test_fd, file_size, status = 1;
     int bytes_send, total_len = 0;
     char filename[MAXLINE], file_buf[BUFFER_SIZE], buf[BUFFER_SIZE], full_path[BUFFER_SIZE], test_file_buf[BUFFER_SIZE];
     unsigned char *sign;
@@ -353,16 +361,26 @@ int put_file_test(int sockfd){
         }
         free(send_buf);
         cnt++;
+
+        
+        recv(sockfd, &status, sizeof(int), 0);//fragment당 디지털 서명 검증에 성공하였는지 서버에게서 수신 0: 실패 1: 성공
+        //printf("status value : %d\n", status);
+        if(!status){
+            break;
+        }
     }
+
+    
     close(fd);
     close(test_fd);
     
-    recv(sockfd, &status, sizeof(int), 0);	//서버에서 받았는지 확인 메세지 수신
+    //recv(sockfd, &status, sizeof(int), 0);	//서버에서 받았는지 확인 메세지 수신
     if(status){//업로드 성공여부 판단
         printf("========[업로드 완료]========\n\n");
     }else{
         printf("========[업로드 실패]========\n\n");
     }
+    
 }
 
 int get_file_test(int sockfd, EVP_PKEY *pub_key){

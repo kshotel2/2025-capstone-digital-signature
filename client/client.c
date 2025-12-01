@@ -12,7 +12,6 @@ int main(int argc, char *argv[]) {
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
         if(sockfd == -1){perror("socket"); exit(1);}
 
-    
         //접속할 서버 주소: 
         //포트번호 : 
         char server_ip[BUFFER_SIZE]; 
@@ -25,7 +24,7 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        printf("포트번호 :"); //12345 -> server 54321 -> root_ca
+        printf("포트번호 :"); 
         fgets(port_num, 7, stdin);
         port_num[strcspn(port_num, "\n")] = '\0';
     
