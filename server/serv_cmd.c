@@ -180,10 +180,13 @@ int clnt_get(int client_fd, char *buffer, char  *command){
         if(sent_bytes != total_len){
             perror("send failed");
             status = 0;
-            free(send_buf);
-            break;
+            
         }
         free(send_buf);
+
+        recv(client_fd, &status, sizeof(int), 0);	//상태 수신
+        if(!status)
+            break;
     }
     close(fd);
 
@@ -305,10 +308,11 @@ int clnt_get_test(int client_fd, char *buffer, char  *command){
         if(sent_bytes != total_len){
             perror("send failed");
             status = 0;
-            free(send_buf);
-            break;
         }
         free(send_buf);
+        recv(client_fd, &status, sizeof(int), 0);	//상태 수신
+        if(!status)
+            break;
     }
     close(fd);
     close(test_fd);

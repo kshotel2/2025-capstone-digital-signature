@@ -215,8 +215,6 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
             printf("[서명 검증]--->");
             printf("\tverification fail\n");
             success = 0;
-            free(recv_buf);
-            break;
         }
         printf("\t파일 길이: (%d) || 디지털 서명 길이: (%zu)\n", file_len, sign_len);
         printf("\t총 패킷 길이: %d\n\n", total_len);
@@ -224,13 +222,15 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
          if(check < 0){
             perror("파일 쓰기 오류 발생: \n");
             success = 0;
-            free(recv_buf);
-            break;
         }
 
         bytes_left -= file_len; //수신한 파일의 크기에서 recv한 데이터 크기만큼 빼서 남은 파일 크기 계산
         free(recv_buf);
         cnt++;
+
+        send(sockfd, &success, sizeof(int), 0);	
+        if(!success)
+            break;
     }
     printf("\n");
     if(file_len < 0){
@@ -482,23 +482,22 @@ int get_file_test(int sockfd, EVP_PKEY *pub_key){
         }else{
             printf("[서명 검증]--->");
             printf("\tverification fail\n");
-            printf("\n");
             success = 0;
-            free(recv_buf);
-            break;
         }
         printf("\t파일 길이: (%d) || 디지털 서명 길이: (%zu)\n", file_len, sign_len);
         printf("\t총 패킷 길이: %d\n\n", total_len);
          if(check < 0){
             perror("파일 쓰기 오류 발생: \n");
             success = 0;
-            free(recv_buf);
-            break;
         }
 
         bytes_left -= file_len; //수신한 파일의 크기에서 recv한 데이터 크기만큼 빼서 남은 파일 크기 계산
         free(recv_buf);
         cnt++;
+
+        send(sockfd, &success, sizeof(int), 0);	
+        if(!success)
+            break;
     }
 
     if(file_len < 0){
