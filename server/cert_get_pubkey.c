@@ -1,7 +1,11 @@
 #include "common.h"
 
+X509 *open_cert();
+
 int cert_get_pubkey(int client_fd, EVP_PKEY **pkey) {
     X509 *cert = NULL;
+    X509 *ca_cert = open_cert();
+    EVP_PKEY *ca_pub_key = X509_get_pubkey(ca_cert);
     int cert_len;
 
     if (recv(client_fd, &cert_len, sizeof(int), 0) <= 0) {
@@ -28,6 +32,14 @@ int cert_get_pubkey(int client_fd, EVP_PKEY **pkey) {
         return -4;
     }
 
+    if(X509_verify(cert, ca_pub_key) == 1){
+        printf("클라이언트 인증서 검증 성공 : CA가 서명한 인증서\n");
+    }else{
+        printf("클라이언트 인증서 검증 실패\n");
+        X509_free(cert);
+        return -6;
+    }
+
     *pkey = X509_get_pubkey(cert);
     if (*pkey == NULL) {
         fprintf(stderr, "공개키 추출 실패\n");
@@ -37,4 +49,20 @@ int cert_get_pubkey(int client_fd, EVP_PKEY **pkey) {
 
     X509_free(cert);
     return 0;
+}
+
+
+X509 *open_cert(){
+    X509 *cert = NULL;
+
+    FILE *fp = fopen("./server_info/ca_cert.pem", "r");
+    if(!fp){
+        perror("ca 인증서 open 실패\n");
+        return NULL;
+    }
+
+    cert = PEM_read_X509(fp, NULL, NULL, NULL);
+    fclose(fp);
+
+    return cert;
 }

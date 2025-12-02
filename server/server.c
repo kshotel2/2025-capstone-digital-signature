@@ -8,13 +8,17 @@ void* handle_clnt(void *arg);
 int clnt_cnt = 0;
 pthread_mutex_t mutx;
 
-int main() {
+int main(int argc, char *argv[]) {
     int server_fd, client_fd;
     struct sockaddr_in server_addr, client_addr;
 	char client_ip[INET_ADDRSTRLEN];
     socklen_t client_len;
-	
 	pthread_t t_id;//스레드
+
+	if(argc != 2){
+		printf("Usage : %s <port>\n", argv[0]);
+		exit(1);
+	}
 
   	// 1. 소켓 생성
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -31,7 +35,7 @@ int main() {
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET; 					//inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr);
 	server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(PORT);
+    server_addr.sin_port = htons(atoi(argv[1]));
 
     // 3. 바인드
     if(bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1){
@@ -39,12 +43,10 @@ int main() {
 		
 	while(1){
 		
-
     	// 4. 리슨
     	if(listen(server_fd, 5) == -1){perror("listen"); close(server_fd);exit(1);}
     	printf("서버 대기 중...\n");
 		
-
 		while(1){
 			client_len = sizeof(client_addr);
     		client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
@@ -63,21 +65,14 @@ int main() {
 			pthread_mutex_unlock(&mutx);
 
 			pthread_create(&t_id, NULL, handle_clnt, (void*)pclient);
-			pthread_detach(t_id);
-		
+			pthread_detach(t_id);		
 			//inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
     		//printf("[%s:%d 클라이언트 연결됨]\n", client_ip, PORT);
 
-
 		}
-    	// 5. 연결 수락
-    	
-
-		
+    	// 5. 연결 수락		
 	}
-	
     // 7. 종료
-    
     close(server_fd);
     return 0;
 }
@@ -89,9 +84,13 @@ void* handle_clnt(void *arg){
 		EVP_PKEY *pub_key = NULL;
 		char buffer[BUFFER_SIZE], command[5];
 
+		//접속한 클라이언트의 인증서를 수신후 CA에서 발급받았던 인증서인지 검증후 공개키 추출
 		cert_get_pubkey(clnt_sock, &pub_key);
-		//EVP_PKEY *pub_key = recv_pub_key(client_fd);
+		
+
+		//서버 인증서 접속한 클라이언트에게 송신
 		send_cert(clnt_sock);
+
 		while(1){
 			memset(buffer, 0, BUFFER_SIZE);
 			//printf("명령 대기 중...\n");

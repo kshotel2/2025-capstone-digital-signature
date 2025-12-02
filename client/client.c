@@ -39,13 +39,8 @@ int main(int argc, char *argv[]) {
             perror("connect"); close(sockfd); exit(1);}
         printf("[%s:%s 서버에 연결됨]\n", server_ip, port_num);
     
-        if(!strcmp(port_num, "12345")){
-            //server
-            sockfd = clnt_to_serv(sockfd);
-        }else if(!strcmp(port_num, "54321")){
-            //root_ca
-            sockfd = client_to_ca(sockfd);
-        }
+        sockfd = clnt_to_serv(sockfd);
+       
     //종료
     close(sockfd);
     }
