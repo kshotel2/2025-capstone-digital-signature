@@ -18,8 +18,10 @@
 #include <openssl/sha.h>
 
 #define BUFFER_SIZE 512
+#define CWD_LEN 512
 #define MAXLINE 256
 #define MdName EVP_sha256()
+
 
 int print_ls();
 int ls(int sockfd, char *buffer);
@@ -37,6 +39,10 @@ int send_csr(int sockfd);
 int save_cert(X509 *cert);
 int clnt_make_dir();
 int make_dir_to_serv(int sockfd);
+int serv_change_dir(int sockfd);
+int serv_pwd(int sockfd);
+int locl_cd();
+void locl_pwd();
 
 typedef struct {
     int sign_len;

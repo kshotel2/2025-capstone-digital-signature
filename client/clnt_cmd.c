@@ -28,7 +28,7 @@ int put_file(int sockfd){
         printf("파일명이 비어있습니다. 다시 입력해주세요.\n");
         return -1;
     }
-    snprintf(full_path, sizeof(full_path), "./file/%s", filename);
+    snprintf(full_path, sizeof(full_path), "./%s", filename);
     //파일명 입력 end
 
     if((fd = open(full_path, O_RDONLY)) == -1){//파일 open
@@ -344,6 +344,96 @@ int make_dir_to_serv(int sockfd){
     return 1;
 }
 
+int serv_change_dir(int sockfd){//server cwd
+    char path[CWD_LEN], check_cd[MAXLINE];
+    int status;
+
+    send(sockfd, "cd", 2, 0);
+
+    memset(path, 0x00, CWD_LEN);
+
+    recv(sockfd, path, CWD_LEN, 0);//현재 작업디렉토리 위치
+    
+
+    while(1){
+        printf("%s$ ", path);
+        if(fgets(path, CWD_LEN, stdin) == NULL){
+            printf("입력 오류!\n");
+        }else{
+            break;
+        }
+        sscanf(path, "%s", check_cd);
+
+        if(strcmp(check_cd, "cd") != 0){
+            printf("Usage : cd <path>\n");
+        }else{
+            break;
+        }
+    }
+    
+
+    path[strcspn(path, "\n")] = 0;  // 엔터 제거
+
+    send(sockfd, path, CWD_LEN, 0);
+
+    recv(sockfd, &status, sizeof(int), 0);
+
+    if(status == 1){
+        printf("Access Denied\n");
+    }else if(status == 2){
+        printf("No such directory\n");
+    }else if(status == 0){
+        printf("directory change\n");
+    }
+}
+
+int serv_pwd(int sockfd){
+    char path[CWD_LEN], buf[BUFFER_SIZE];
+
+    memset(buf, 0x00, BUFFER_SIZE);
+    strcpy(buf, "pwd ");
+    send(sockfd, buf, BUFFER_SIZE, 0);
+
+    recv(sockfd, path, CWD_LEN, 0);//현재 작업디렉토리 위치
+    printf("현재 서버 디렉토리: %s\n", path);
+}
+
+int locl_cd(){
+    char path[CWD_LEN], buf[BUFFER_SIZE], target[MAXLINE], new_path[1024];
+    int status;
+    memset(buf, 0x00, BUFFER_SIZE);
+    memset(path, 0x00, CWD_LEN);
+    memset(new_path, 0x00, 1024);
+
+    getcwd(path, CWD_LEN);
+    printf("%s$ ", path);
+    fgets(buf, BUFFER_SIZE, stdin);
+
+    sscanf(buf + 2, "%s", target);
+
+    if(target[0] == '/') {//절대경로 -> / 로시작
+        snprintf(new_path, sizeof(new_path), "%s%s", path, target);
+    }else {
+        snprintf(new_path, sizeof(new_path), "%s/%s", path, target);
+    }
+
+    if(chdir(new_path)==-1){
+        perror("cd 실패");
+        return -1;
+    }
+
+    locl_pwd();
+
+}
+
+void locl_pwd(){
+    char cwd[CWD_LEN];
+    if(getcwd(cwd, sizeof(cwd)) != 0){
+        printf("현재 로컬 디렉토리: %s\n", cwd);
+    }else
+        perror("error getcwd");
+}
+
 //파일 업로드 fail test 
 int put_file_test(int sockfd){
     struct stat obj;
@@ -372,7 +462,7 @@ int put_file_test(int sockfd){
         printf("파일명이 비어있습니다. 다시 입력해주세요.\n");
         return -1;
     }
-    snprintf(full_path, sizeof(full_path), "./file/%s", filename);
+    snprintf(full_path, sizeof(full_path), "./%s", filename);
     //파일명 입력 end
 
     if((fd = open(full_path, O_RDONLY)) == -1){//파일 open
@@ -394,7 +484,7 @@ int put_file_test(int sockfd){
     send(sockfd, &file_size, sizeof(int), 0); //파일 크기 전송
     
     /*----------------fail test---------------------------------------*/
-    snprintf(full_path, sizeof(full_path), "./file/%s_test", filename);
+    snprintf(full_path, sizeof(full_path), "./test_file/%s_test", filename);
     test_fd = open(full_path, O_RDONLY);
     /*----------------fail test---------------------------------------*/
 

@@ -1,7 +1,51 @@
 #include "common.h"
 
+void normalize_path(char *path, char *root_dir);
+int is_dir(const char *path);
+
+int change_dir(int clnt_sock, client_t *clnt_info){ //cd
+    char buf[CWD_LEN], target[MAXLINE], new_path[1024];
+    char root_dir[CWD_LEN] = "/home/chj7138/capstone/2025-capstone-digital-signature/server/file";
+    int status = 0;
+    memset(buf, 0x00, CWD_LEN);
+    memset(new_path, 0x00, 1024);
+    send(clnt_sock, clnt_info->cwd, CWD_LEN, 0);
+
+    recv(clnt_sock, buf, CWD_LEN, 0);
+    //printf("%s\n", path);
+   
+    sscanf(buf + 2, "%s", target);
+    //printf("%s\n", target);
+
+    if(target[0] == '/') {//절대경로 -> / 로시작
+        snprintf(new_path, sizeof(new_path), "%s%s", clnt_info->cwd, target);
+    }else {
+        snprintf(new_path, sizeof(new_path), "%s/%s", clnt_info->cwd, target);
+    }
+    //printf("2%s\n", new_path);
+    normalize_path(new_path, root_dir);
+
+    size_t root_len = strlen(root_dir);
+
+    if(strncmp(new_path, root_dir, root_len) != 0) {
+        status = 1;
+        send(clnt_sock, &status, sizeof(int), 0);
+        return -1;
+    }
+    //printf("3%s\n", new_path);
+    // 존재 여부 확인
+    if(!is_dir(new_path)){
+        status = 2;
+        send(clnt_sock,  &status, sizeof(int), 0);
+        return -1;
+    }
+    //printf("4%s\n", new_path);
+    strncpy(clnt_info->cwd, new_path, CWD_LEN);
+    send(clnt_sock, &status, sizeof(int), 0);
+}
+
 //server <- client 파일 다운로드
-int clnt_put(int client_fd, char *buffer, char *command, EVP_PKEY *pub_key){
+int clnt_put(int client_fd, char *buffer, char *command, EVP_PKEY *pub_key, char *path){
     int check, fd, file_len, bytes_left, file_size, total_len= 0;
     int success = 1;
     size_t sign_len;
@@ -13,7 +57,7 @@ int clnt_put(int client_fd, char *buffer, char *command, EVP_PKEY *pub_key){
     //printf("filename: %s\n", filename);
 
     while(1){
-        snprintf(full_path, sizeof(full_path), "./file/%s", filename);
+        snprintf(full_path, sizeof(full_path), "%s/%s", path, filename);
         fd = open(full_path, O_CREAT | O_EXCL | O_WRONLY, 0666);
         if(fd == -1){
             sprintf(filename + strlen(filename), "_1");}
@@ -120,7 +164,7 @@ int clnt_put(int client_fd, char *buffer, char *command, EVP_PKEY *pub_key){
 }
 
 //clietn -> server 클라이언트에 있는 파일 다운로드
-int clnt_get(int client_fd, char *buffer, char  *command){
+int clnt_get(int client_fd, char *buffer, char  *command, char *path){
     struct stat obj;
     size_t sign_len;
     int fd, status, file_size, bytes_send, total_len;
@@ -134,7 +178,7 @@ int clnt_get(int client_fd, char *buffer, char  *command){
     sscanf(buffer + strlen(command), "%s", filename); //command 이후 filename에 포인팅
     //printf("filename: %s\n", filename); //확인용 나중에 주석처리
 
-    snprintf(full_path, sizeof(full_path), "./file/%s", filename);
+    snprintf(full_path, sizeof(full_path), "%s/%s", path, filename);
     fd = open(full_path, O_RDONLY);
 
     if(fd == -1){//파일 존재 여부
@@ -198,21 +242,21 @@ int clnt_get(int client_fd, char *buffer, char  *command){
     }
 }
 
-int ls(int client_fd){
+int ls(int client_fd, char *path){
     char filename[MAXLINE], full_path[MAXLINE];
 	DIR *d;
 	struct dirent *dir;
 	struct stat file_info;
 	int status = 0;
     
-	d = opendir("./file");
+	d = opendir(path);
 	if(d){
 	    while((dir = readdir(d)) != NULL){
             memset(filename, 0x00, MAXLINE);
 			memset(full_path, 0x00, MAXLINE);
 
 			//printf("%s\n", dir -> d_name);
-			snprintf(full_path, MAXLINE+10, "./file/%s", dir->d_name);
+			snprintf(full_path, MAXLINE+10, "%s/%s", path, dir->d_name);
 			lstat(full_path, &file_info);
 						
 			if(S_ISREG(file_info.st_mode)){ //파일만 분류
@@ -239,15 +283,16 @@ int ls(int client_fd){
 
 }
 
-int make_dir(int clnt_sock, char *buffer, char *command){
+int make_dir(int clnt_sock, char *buffer, char *command, char *path){
     int check_status = 0;
-    char dir_name[MAXLINE];
+    char dir_name[MAXLINE], full_path[BUFFER_SIZE];
     struct stat st;
 
     sscanf(buffer + strlen(command), "%s", dir_name); //command 이후 dir name에 포인팅
+    snprintf(full_path, sizeof(full_path), "%s/%s", path, dir_name);
 
     //1. 디렉토리 존재 여부 확인
-    if (stat(dir_name, &st) == 0) {
+    if (stat(full_path, &st) == 0) {
         if (S_ISDIR(st.st_mode)) {
             // 이미 디렉토리가 존재함
             check_status = 0;
@@ -258,7 +303,7 @@ int make_dir(int clnt_sock, char *buffer, char *command){
     } 
     else {
         //2. 디렉토리가 없음 → 생성 시도
-        if (mkdir(dir_name, 0755) == 0) {
+        if (mkdir(full_path, 0755) == 0) {
             check_status = 1; // 성공적으로 생성
         } else {
             check_status = -1; // 생성 실패
@@ -271,8 +316,49 @@ int make_dir(int clnt_sock, char *buffer, char *command){
 }
 
 
+void normalize_path(char *path, char *root_dir)
+{
+    char temp[CWD_LEN];
+    char *token, *stack[64];
+    int top = -1;
+
+    strcpy(temp, path);
+
+    token = strtok(temp, "/");
+    while(token != NULL){
+        if(strcmp(token, "..") == 0){
+            if(top >= 0) top--; // 상위로 이동
+        }
+        else if(strcmp(token, ".") == 0){
+            // 현재 디렉토리 → 무시
+        }
+        else if(strlen(token) > 0){
+            stack[++top] = token;
+        }
+        token = strtok(NULL, "/");
+    }
+
+    // 재조합
+    path[0] = '\0';
+    strcat(path, "/");
+    for(int i=0; i<=top; i++){
+        strcat(path, stack[i]);
+        if(i != top) strcat(path, "/");
+    }
+}
+
+int is_dir(const char *path) {
+    struct stat st;
+    return (stat(path, &st) == 0 && S_ISDIR(st.st_mode));
+}
+
+int serv_pwd(int clnt_sock, client_t *clnt_info){
+    
+    send(clnt_sock, clnt_info->cwd, CWD_LEN, 0);
+    
+}
 //fail test
-int clnt_get_test(int client_fd, char *buffer, char  *command){
+int clnt_get_test(int client_fd, char *buffer, char  *command, char *path){
     struct stat obj;
     size_t sign_len;
     int fd, test_fd, status, file_size, bytes_send, total_len;
@@ -286,7 +372,7 @@ int clnt_get_test(int client_fd, char *buffer, char  *command){
     sscanf(buffer + strlen(command), "%s", filename); //command 이후 filename에 포인팅
     //printf("filename: %s\n", filename); //확인용 나중에 주석처리
 
-    snprintf(full_path, sizeof(full_path), "./file/%s", filename);
+    snprintf(full_path, sizeof(full_path), "%s/%s", path, filename);
     fd = open(full_path, O_RDONLY);
 
     if(fd == -1){//파일 존재 여부
@@ -304,7 +390,7 @@ int clnt_get_test(int client_fd, char *buffer, char  *command){
     send(client_fd, &file_size, sizeof(int), 0); //파일 크기 전송
 
     /*----------------fail test---------------------------------------*/
-    snprintf(full_path, sizeof(full_path), "./file/%s_test", filename);
+    snprintf(full_path, sizeof(full_path), "./test_file/%s_test", filename);
     test_fd = open(full_path, O_RDONLY);
     /*----------------fail test---------------------------------------*/
 

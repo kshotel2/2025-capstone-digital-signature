@@ -11,7 +11,7 @@ int clnt_to_serv(int sockfd){
     
     // 4. 데이터 송수신
     while(1){
-        printf("명령어 입력 [put, get, ls, client_ls, mkdir, client_mkdir, exit](종료: exit): ");
+        printf("명령어 입력 [put, get, ls, cd, pwd, mkdir, locl_ls, locl_cd, locl_mkdir, exit](종료: exit): ");
         fgets(buffer, BUFFER_SIZE, stdin);
         buffer[strcspn(buffer, "\n")] = 0;
 
@@ -19,7 +19,7 @@ int clnt_to_serv(int sockfd){
 			send(sockfd, buffer, 5, 0);
 			printf("연결 종료\n");
 			break;
-		}else if(strcmp(buffer, "client_ls") == 0){ //file_ls명령어
+		}else if(strcmp(buffer, "locl_ls") == 0){ //file_ls명령어
             print_ls();
         }else if(strcmp(buffer, "put") == 0){ //put 명령어
             if(put_file(sockfd) == -1){
@@ -39,12 +39,20 @@ int clnt_to_serv(int sockfd){
             if(get_file_test(sockfd, pub_key) == -1){
                 continue;
             }
-        }else if(strcmp(buffer, "client_mkdir") == 0){
+        }else if(strcmp(buffer, "locl_mkdir") == 0){
             if(clnt_make_dir() == -1)
                 continue;
         }else if(strcmp(buffer, "mkdir") == 0){
             if(make_dir_to_serv(sockfd) == -1)
                 continue;
+        }else if(strcmp(buffer, "cd") == 0){
+            serv_change_dir(sockfd);
+        }else if(strcmp(buffer, "pwd") == 0){
+            serv_pwd(sockfd);
+        }else if(strcmp(buffer, "locl_cd") == 0){
+            locl_cd();
+        }else if(strcmp(buffer, "locl_pwd") == 0){
+            locl_pwd();
         }
 	}
     return sockfd;
