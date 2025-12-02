@@ -1,14 +1,18 @@
 #include "common.h"
 
-int ecdsa_sign(char *file_buf, int len, unsigned char **sign, size_t *sign_len){
+int ecdsa_sign(char *file_buf, int len, unsigned char **sign, size_t *sign_len, char *path){
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     EVP_MD_CTX *tmp = EVP_MD_CTX_new(); //해쉬값 출력용
 
     unsigned char digest[EVP_MAX_MD_SIZE];
     unsigned int digest_len = 0;
 
+    char full_path[BUFFER_SIZE];
+    memset(full_path, 0x00, BUFFER_SIZE);
+    snprintf(full_path, sizeof(full_path), "%s/client_key/ec_priv_key.pem", path);
+
     //개인키 가져오기
-    FILE *fp = fopen("./client_key/ec_priv_key.pem", "r");
+    FILE *fp = fopen(full_path, "r");
     if(!fp){
         perror("개인 키 파일 열기 실패");
         return -11;

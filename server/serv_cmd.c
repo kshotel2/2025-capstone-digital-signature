@@ -243,45 +243,54 @@ int clnt_get(int client_fd, char *buffer, char  *command, char *path){
 }
 
 int ls(int client_fd, char *path){
-    char filename[MAXLINE], full_path[MAXLINE];
+    char filename[BUFFER_SIZE], full_path[BUFFER_SIZE];
 	DIR *d;
 	struct dirent *dir;
 	struct stat file_info;
 	int status = 0;
     
 	d = opendir(path);
-	if(d){
-	    while((dir = readdir(d)) != NULL){
-            memset(filename, 0x00, MAXLINE);
-			memset(full_path, 0x00, MAXLINE);
+	 while ((dir = readdir(d)) != NULL) {
 
-			//printf("%s\n", dir -> d_name);
-			snprintf(full_path, MAXLINE+10, "%s/%s", path, dir->d_name);
-			lstat(full_path, &file_info);
-						
-			if(S_ISREG(file_info.st_mode)){ //파일만 분류
-                status = 1;
-                send(client_fd, &status, sizeof(int), 0); //파일명 있는지 체크여부 보내줌
+        memset(filename, 0, BUFFER_SIZE);
+        memset(full_path, 0, BUFFER_SIZE);
 
-                size_t max_name = sizeof(filename)-2;
-                size_t namelen = strnlen(dir->d_name, max_name);
+        snprintf(full_path, sizeof(full_path), "%s/%s", path, dir->d_name);
+        lstat(full_path, &file_info);
 
-				//printf("파일이름: %s\n", dir->d_name);
-							
-				int len = snprintf(filename, sizeof(filename), "%.*s\r", (int)namelen, dir->d_name);
-				//printf("길이 : %d\n",len);
-				//printf("파일명 : %s\n",filename);
+        // "." ".." 제외 (보통 ls에서 숨김)
+        if(strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0)
+            continue;
 
-				send(client_fd, filename, sizeof(filename), 0);
-			}
-			status = 0;			
-		}
+        // 파일 or 디렉토리 둘 다 전송
+        if (S_ISDIR(file_info.st_mode)) {
+            // 디렉토리는 뒤에 "/" 붙이기
+            snprintf(filename, BUFFER_SIZE, "%s/", dir->d_name);
+        }
+        else if (S_ISREG(file_info.st_mode)) {
+            snprintf(filename, BUFFER_SIZE, "%s", dir->d_name);
+        }
+        else {
+            continue;  // 파일/폴더 외엔 무시
+        }
+
+        // status = 1 → 항목 있음
+        status = 1;
         send(client_fd, &status, sizeof(int), 0);
-	    
-		closedir(d);
-	}
 
+        // 항상 MAXLINE 길이로 보내는 fixed-size 프로토콜
+        send(client_fd, filename, BUFFER_SIZE, 0);
+    }
+
+    // 마지막에 status = 0 → 전송 끝
+    status = 0;
+    send(client_fd, &status, sizeof(int), 0);
+
+    closedir(d);
+    return 0;
 }
+
+
 
 int make_dir(int clnt_sock, char *buffer, char *command, char *path){
     int check_status = 0;
