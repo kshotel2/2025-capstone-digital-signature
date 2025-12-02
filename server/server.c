@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
 			clnt_cnt++;
 			printf("현재 접속한 클라이언트 개수 : %d\n", clnt_cnt);
 			pthread_mutex_unlock(&mutx);
-
+			
 			pthread_create(&t_id, NULL, handle_clnt, (void*)pclient);
 			pthread_detach(t_id);		
 			//inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
@@ -116,6 +116,8 @@ void* handle_clnt(void *arg){
 				ls(clnt_sock);
 			}else if(strcmp(command, "testget") == 0){	//get 명령어
 				clnt_get_test(clnt_sock, buffer, command);
+			}else if(strcmp(command, "mkdir") == 0){
+				make_dir(clnt_sock, buffer, command);
 			}
     	}
 		EVP_PKEY_free(pub_key);
