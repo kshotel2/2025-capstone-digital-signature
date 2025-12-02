@@ -1,7 +1,9 @@
 #include "common.h"
 
+ssize_t recv_all(int sock, void *buf, size_t len);
+
 //client -> server 파일업로드
-int put_file(int sockfd){
+int put_file(int sockfd, char *path){
     struct stat obj;
     size_t sign_len;
     int fd, file_size, status;
@@ -63,7 +65,7 @@ int put_file(int sockfd){
         sign_len = 0;
         
         //printf("서명시작\n");
-        ecdsa_sign(file_buf, bytes_send, &sign, &sign_len); //서명 동작
+        ecdsa_sign(file_buf, bytes_send, &sign, &sign_len, path); //서명 동작
         
         //서명길이+자른 파일길이
         total_len = (int)sign_len + bytes_send;
@@ -155,7 +157,7 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
     }
 
     while(1){//파일 오픈
-        snprintf(full_path, sizeof(full_path), "./file/%s", filename);
+        snprintf(full_path, sizeof(full_path), "./%s", filename);
         fd = open(full_path, O_CREAT | O_EXCL | O_WRONLY, 0666);
         if(fd == -1){
             sprintf(filename + strlen(filename), "_1");}
@@ -254,26 +256,39 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
 
 
 int ls(int sockfd, char *buffer){
-    char filename[MAXLINE];
+    char filename[BUFFER_SIZE];
     int status = 0;
 
     send(sockfd, buffer, BUFFER_SIZE, 0);
-
+    printf("\n");
+    printf("----------파일 목록----------\n");
+    printf("\n");
     while(1){
         
-        recv(sockfd, &status, sizeof(int), 0);
+        recv_all(sockfd, &status, sizeof(int));
         if(!status){ //ls로 출력할 파일명이 더 없으면 while문 break
             break;
         }
-        ssize_t n = recv(sockfd, filename, sizeof(filename), 0);
-        filename[n] = '\0';
+        recv_all(sockfd, filename, BUFFER_SIZE);
         printf("%s\n", filename);
 
     }
-    
+    printf("\n");
+    printf("-----------------------------\n");
+    printf("\n");
     return 0;
 }
+ ssize_t recv_all(int sock, void *buf, size_t len) {
+    size_t received = 0;
+    ssize_t n;
 
+    while(received < len) {
+        n = recv(sock, (char*)buf + received, len - received, 0);
+        if (n <= 0) return n;
+        received += n;
+    }
+    return received;
+}
 int clnt_make_dir(){
     struct stat st;
     char dir_name[MAXLINE];
@@ -354,7 +369,7 @@ int serv_change_dir(int sockfd){//server cwd
 
     recv(sockfd, path, CWD_LEN, 0);//현재 작업디렉토리 위치
     
-
+    printf("\n");
     while(1){
         printf("%s$ ", path);
         if(fgets(path, CWD_LEN, stdin) == NULL){
@@ -385,6 +400,9 @@ int serv_change_dir(int sockfd){//server cwd
     }else if(status == 0){
         printf("directory change\n");
     }
+    printf("\n");
+
+    serv_pwd(sockfd);
 }
 
 int serv_pwd(int sockfd){
@@ -398,7 +416,7 @@ int serv_pwd(int sockfd){
     printf("현재 서버 디렉토리: %s\n", path);
 }
 
-int locl_cd(){
+int local_cd(){
     char path[CWD_LEN], buf[BUFFER_SIZE], target[MAXLINE], new_path[1024];
     int status;
     memset(buf, 0x00, BUFFER_SIZE);
@@ -406,9 +424,10 @@ int locl_cd(){
     memset(new_path, 0x00, 1024);
 
     getcwd(path, CWD_LEN);
-    printf("%s$ ", path);
+    printf("\n%s$ ", path);
     fgets(buf, BUFFER_SIZE, stdin);
-
+    buf[strcspn(buf, "\n")] = 0;
+    
     sscanf(buf + 2, "%s", target);
 
     if(target[0] == '/') {//절대경로 -> / 로시작
@@ -422,20 +441,20 @@ int locl_cd(){
         return -1;
     }
 
-    locl_pwd();
+    local_pwd();
 
 }
 
-void locl_pwd(){
+void local_pwd(){
     char cwd[CWD_LEN];
     if(getcwd(cwd, sizeof(cwd)) != 0){
-        printf("현재 로컬 디렉토리: %s\n", cwd);
+        printf("\n현재 로컬 디렉토리: %s\n", cwd);
     }else
         perror("error getcwd");
 }
 
 //파일 업로드 fail test 
-int put_file_test(int sockfd){
+int put_file_test(int sockfd, char*path){
     struct stat obj;
     size_t sign_len;
     int fd, test_fd, file_size, status = 1;
@@ -484,8 +503,12 @@ int put_file_test(int sockfd){
     send(sockfd, &file_size, sizeof(int), 0); //파일 크기 전송
     
     /*----------------fail test---------------------------------------*/
-    snprintf(full_path, sizeof(full_path), "./test_file/%s_test", filename);
-    test_fd = open(full_path, O_RDONLY);
+    char test_full_path[BUFFER_SIZE];
+    memset(test_full_path, 0x00, BUFFER_SIZE);
+
+    snprintf(test_full_path, sizeof(test_full_path), "%s/test_file/%s_test",path, filename);
+    //snprintf(full_path, sizeof(full_path), "/home/chj7138/capstone/2025-capstone-digital-signature/client/test_file/%s_test", filename);
+    test_fd = open(test_full_path, O_RDONLY);
     /*----------------fail test---------------------------------------*/
 
     printf("========[업로드 시작]========\n");
@@ -505,7 +528,7 @@ int put_file_test(int sockfd){
         sign_len = 0;
         
         //printf("서명시작\n");
-        ecdsa_sign(file_buf, bytes_send, &sign, &sign_len); //서명 동작
+        ecdsa_sign(file_buf, bytes_send, &sign, &sign_len, path); //서명 동작
         
         //서명길이+자른 파일길이
         total_len = (int)sign_len + bytes_send;
@@ -601,7 +624,7 @@ int get_file_test(int sockfd, EVP_PKEY *pub_key){
     }
 
     while(1){//파일 오픈
-        snprintf(full_path, sizeof(full_path), "./file/%s", filename);
+        snprintf(full_path, sizeof(full_path), "./%s", filename);
         fd = open(full_path, O_CREAT | O_EXCL | O_WRONLY, 0666);
         if(fd == -1){
             sprintf(filename + strlen(filename), "_1");}

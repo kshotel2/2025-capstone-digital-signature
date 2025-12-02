@@ -25,14 +25,14 @@
 
 int print_ls();
 int ls(int sockfd, char *buffer);
-int put_file(int sockfd);
-int put_file_test(int sockfd);
+int put_file(int sockfd, char *path);
+int put_file_test(int sockfd, char*path);
 int get_file(int sockfd, EVP_PKEY *pub_key);
 int get_file_test(int sockfd, EVP_PKEY *pub_key);
 int send_cert(int sockfd);
 int clnt_to_serv(int sockfd);
 int client_to_ca(int sockfd);
-int ecdsa_sign(char *file_buf, int len, unsigned char **sign, size_t *sign_len);
+int ecdsa_sign(char *file_buf, int len, unsigned char **sign, size_t *sign_len, char *path);
 int ecdsa_verify(char *file_buf, int len, unsigned char *sign, size_t sign_len, EVP_PKEY *pkey);
 int cert_get_pubkey(int sockfd, EVP_PKEY **pkey);
 int send_csr(int sockfd);
@@ -41,8 +41,8 @@ int clnt_make_dir();
 int make_dir_to_serv(int sockfd);
 int serv_change_dir(int sockfd);
 int serv_pwd(int sockfd);
-int locl_cd();
-void locl_pwd();
+int local_cd();
+void local_pwd();
 
 typedef struct {
     int sign_len;
