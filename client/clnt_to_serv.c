@@ -4,11 +4,11 @@ int clnt_to_serv(int sockfd){
     char buffer[BUFFER_SIZE];
     EVP_PKEY *pub_key = NULL;
 
-     //인증서 전송
-   // printf("----------------------------\n");
+    //인증서 전송
     send_cert(sockfd);
-    //printf("----------------------------\n");
+    //서버의 인증서 수신후 CA에서 발급받았던 인증서였는지 검증후 공개키 추출
     cert_get_pubkey(sockfd, &pub_key);
+    
     // 4. 데이터 송수신
     while(1){
         printf("명령어 입력 [put, get, ls, client_ls, mkdir, exit](종료: exit): ");
