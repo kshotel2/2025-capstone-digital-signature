@@ -4,6 +4,10 @@ int print_ls(){
     pid_t pid = fork();
     int status;
 
+    char cwd[CWD_LEN];
+    getcwd(cwd, sizeof(cwd));
+        
+
     if (pid < 0) {
         perror("fork 실패");
         return 1;
@@ -13,7 +17,7 @@ int print_ls(){
         printf("\n");
 
         // 자식 프로세스: ls 실행
-        execl("/bin/ls", "ls", "./file", (char *)NULL);
+        execl("/bin/ls", "ls", cwd, (char *)NULL);
         perror("execl 실패");  // execl 실패했을 때만 실행됨
         return 1;
     } else {

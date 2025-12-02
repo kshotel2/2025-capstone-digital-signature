@@ -1,8 +1,6 @@
 //server
 #include "common.h"
 
-#define PORT 12345
-
 void* handle_clnt(void *arg);
 
 int clnt_cnt = 0;
@@ -14,6 +12,7 @@ int main(int argc, char *argv[]) {
 	char client_ip[INET_ADDRSTRLEN];
     socklen_t client_len;
 	pthread_t t_id;//스레드
+	
 
 	if(argc != 2){
 		printf("Usage : %s <port>\n", argv[0]);
@@ -57,14 +56,26 @@ int main(int argc, char *argv[]) {
 				continue;
 			}
 			int *pclient = malloc(sizeof(int));
-			*pclient = client_fd;
+			//*pclient = client_fd;
+
+			client_t *clnt_info = malloc(sizeof(client_t));
+			clnt_info ->sock = client_fd;
+
+			char cwd[MAXLINE];
+			char full_path[BUFFER_SIZE];
+			getcwd(cwd, sizeof(cwd));
+			
+			snprintf(full_path, sizeof(full_path), "%s/%s", cwd, "file");
+			//printf("초기 cwd %s\n", full_path);
+			strcpy(clnt_info->cwd, full_path); //초기 cwd
+			clnt_info ->pub_key = NULL;
 
 			pthread_mutex_lock(&mutx);
 			clnt_cnt++;
 			printf("현재 접속한 클라이언트 개수 : %d\n", clnt_cnt);
 			pthread_mutex_unlock(&mutx);
 			
-			pthread_create(&t_id, NULL, handle_clnt, (void*)pclient);
+			pthread_create(&t_id, NULL, handle_clnt, (void*)clnt_info);
 			pthread_detach(t_id);		
 			//inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
     		//printf("[%s:%d 클라이언트 연결됨]\n", client_ip, PORT);
@@ -78,12 +89,14 @@ int main(int argc, char *argv[]) {
 }
 
 void* handle_clnt(void *arg){
-		int clnt_sock = *(int*)arg;
-		free(arg); //malloc했던 pclient 
+		//int clnt_sock = *(int*)arg;
+		client_t *clnt_info = (client_t*)arg;
+		//free(arg); //*pclient
 
-		EVP_PKEY *pub_key = NULL;
-		char buffer[BUFFER_SIZE], command[5];
-
+		int clnt_sock = clnt_info->sock;
+		EVP_PKEY *pub_key = clnt_info->pub_key;
+		char buffer[BUFFER_SIZE], command[10];
+		//printf("clnt_sock : %d\n", clnt_sock);
 		//접속한 클라이언트의 인증서를 수신후 CA에서 발급받았던 인증서인지 검증후 공개키 추출
 		cert_get_pubkey(clnt_sock, &pub_key);
 		
@@ -92,7 +105,8 @@ void* handle_clnt(void *arg){
 		send_cert(clnt_sock);
 
 		while(1){
-			memset(buffer, 0, BUFFER_SIZE);
+			memset(buffer, 0x00, BUFFER_SIZE);
+			
 			//printf("명령 대기 중...\n");
 		
 			int recv_len = recv(clnt_sock, buffer, BUFFER_SIZE, 0); //명령어 이름 수신
@@ -108,20 +122,25 @@ void* handle_clnt(void *arg){
 				break;
 			}
 			else if(strcmp(command, "put") == 0){	//put 명령어
-				clnt_put(clnt_sock, buffer, command, pub_key);
+				clnt_put(clnt_sock, buffer, command, pub_key, clnt_info->cwd);
 
 			}else if(strcmp(command, "get") == 0){	//get 명령어
-				clnt_get(clnt_sock, buffer, command);
+				clnt_get(clnt_sock, buffer, command, clnt_info->cwd);
 			}else if(strcmp(command, "ls") == 0){
-				ls(clnt_sock);
+				ls(clnt_sock, clnt_info->cwd);
 			}else if(strcmp(command, "testget") == 0){	//get 명령어
-				clnt_get_test(clnt_sock, buffer, command);
+				clnt_get_test(clnt_sock, buffer, command, clnt_info->cwd);
 			}else if(strcmp(command, "mkdir") == 0){
-				make_dir(clnt_sock, buffer, command);
+				make_dir(clnt_sock, buffer, command, clnt_info->cwd);
+			}else if(strcmp(command, "cd") == 0){
+				change_dir(clnt_sock, clnt_info);
+			}else if(strcmp(command, "pwd") == 0){
+				serv_pwd(clnt_sock, clnt_info);
 			}
     	}
 		EVP_PKEY_free(pub_key);
 		close(clnt_sock);
+		free(clnt_info);
 
 		pthread_mutex_lock(&mutx);
 		clnt_cnt--;

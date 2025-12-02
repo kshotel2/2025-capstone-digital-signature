@@ -7,7 +7,9 @@
         "fcntl.h": "c",
         "typeinfo": "c",
         "evp.h": "c",
-        "x509v3.h": "c"
+        "x509v3.h": "c",
+        "sha.h": "c",
+        "stat.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }
