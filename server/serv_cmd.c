@@ -239,6 +239,38 @@ int ls(int client_fd){
 
 }
 
+int make_dir(int clnt_sock, char *buffer, char *command){
+    int check_status = 0;
+    char dir_name[MAXLINE];
+    struct stat st;
+
+    sscanf(buffer + strlen(command), "%s", dir_name); //command 이후 dir name에 포인팅
+
+    //1. 디렉토리 존재 여부 확인
+    if (stat(dir_name, &st) == 0) {
+        if (S_ISDIR(st.st_mode)) {
+            // 이미 디렉토리가 존재함
+            check_status = 0;
+        } else {
+            // 같은 이름의 파일이 존재함
+            check_status = -1;
+        }
+    } 
+    else {
+        //2. 디렉토리가 없음 → 생성 시도
+        if (mkdir(dir_name, 0755) == 0) {
+            check_status = 1; // 성공적으로 생성
+        } else {
+            check_status = -1; // 생성 실패
+        }
+    }
+
+    send(clnt_sock, &check_status, sizeof(int), 0);
+
+    return 0;
+}
+
+
 //fail test
 int clnt_get_test(int client_fd, char *buffer, char  *command){
     struct stat obj;

@@ -11,7 +11,7 @@ int clnt_to_serv(int sockfd){
     
     // 4. 데이터 송수신
     while(1){
-        printf("명령어 입력 [put, get, ls, client_ls, mkdir, exit](종료: exit): ");
+        printf("명령어 입력 [put, get, ls, client_ls, mkdir, client_mkdir, exit](종료: exit): ");
         fgets(buffer, BUFFER_SIZE, stdin);
         buffer[strcspn(buffer, "\n")] = 0;
 
@@ -39,8 +39,12 @@ int clnt_to_serv(int sockfd){
             if(get_file_test(sockfd, pub_key) == -1){
                 continue;
             }
+        }else if(strcmp(buffer, "client_mkdir") == 0){
+            if(clnt_make_dir() == -1)
+                continue;
         }else if(strcmp(buffer, "mkdir") == 0){
-
+            if(make_dir_to_serv(sockfd) == -1)
+                continue;
         }
 	}
     return sockfd;

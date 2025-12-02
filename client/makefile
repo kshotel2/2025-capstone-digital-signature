@@ -1,7 +1,7 @@
 .SUFFIXES : .c .o
 CFLAGS = -g -lcrypto -lssl
 
-OBJS = client.o ecdsa.o send_certificate.o clnt_fork.o clnt_cmd.o clnt_to_serv.o client_to_ca.o make_csr.o cert_get_pubkey.o ecdsaVerify.o
+OBJS = client.o ecdsa.o send_certificate.o clnt_fork.o clnt_cmd.o clnt_to_serv.o make_csr.o cert_get_pubkey.o ecdsaVerify.o
 
 SRCS = $(OBJS:.o=.c)
 HFILES = common.h

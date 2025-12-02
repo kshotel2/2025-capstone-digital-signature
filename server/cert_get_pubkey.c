@@ -33,7 +33,7 @@ int cert_get_pubkey(int client_fd, EVP_PKEY **pkey) {
     }
 
     if(X509_verify(cert, ca_pub_key) == 1){
-        printf("클라이언트 인증서 검증 성공 : CA가 서명한 인증서\n");
+        //printf("클라이언트 인증서 검증 성공 : CA가 서명한 인증서\n");
     }else{
         printf("클라이언트 인증서 검증 실패\n");
         X509_free(cert);

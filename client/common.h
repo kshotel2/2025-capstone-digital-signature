@@ -35,6 +35,8 @@ int ecdsa_verify(char *file_buf, int len, unsigned char *sign, size_t sign_len, 
 int cert_get_pubkey(int sockfd, EVP_PKEY **pkey);
 int send_csr(int sockfd);
 int save_cert(X509 *cert);
+int clnt_make_dir();
+int make_dir_to_serv(int sockfd);
 
 typedef struct {
     int sign_len;

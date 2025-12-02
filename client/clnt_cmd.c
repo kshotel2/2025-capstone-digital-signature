@@ -129,7 +129,7 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
     printf("다운 할 파일명을 입력해주세요 :");
     if(fgets(filename, sizeof(filename), stdin) == NULL){
         printf("입력 오류!\n");
-        return -1;;
+        return -1;
     }
     printf("\n");
 
@@ -252,6 +252,97 @@ int get_file(int sockfd, EVP_PKEY *pub_key){
     return 1;
 }
 
+
+int ls(int sockfd, char *buffer){
+    char filename[MAXLINE];
+    int status = 0;
+
+    send(sockfd, buffer, BUFFER_SIZE, 0);
+
+    while(1){
+        
+        recv(sockfd, &status, sizeof(int), 0);
+        if(!status){ //ls로 출력할 파일명이 더 없으면 while문 break
+            break;
+        }
+        ssize_t n = recv(sockfd, filename, sizeof(filename), 0);
+        filename[n] = '\0';
+        printf("%s\n", filename);
+
+    }
+    
+    return 0;
+}
+
+int clnt_make_dir(){
+    struct stat st;
+    char dir_name[MAXLINE];
+    printf("생성할 디렉토리의 이름을 입력해주세요 :");
+    if(fgets(dir_name, sizeof(dir_name), stdin) == NULL){
+        printf("입력 오류!\n");
+        return -1;
+    }
+
+    dir_name[strcspn(dir_name, "\n")] = 0;  // 엔터 제거
+
+    //1. 디렉토리 존재 여부 확인
+    if (stat(dir_name, &st) == 0) {
+        if (S_ISDIR(st.st_mode)) {
+            // 이미 디렉토리가 존재함
+            printf("생성 실패 같은 이름의 디렉토리 존재함\n\n");
+            return -1;
+        } else {
+            // 같은 이름의 파일이 존재함
+            printf("생성 실패 같은 이름의 파일 존재함\n\n");
+            return -1;
+        }
+    } 
+    else {
+        //2. 디렉토리가 없음 → 생성 시도
+        if (mkdir(dir_name, 0755) == 0) {
+            printf("%s 디렉토리 생성완료\n\n", dir_name);
+        } else {
+            printf("오류 생성 실패\n\n");
+            return -1;
+        }
+    }
+    return 1;
+}
+
+int make_dir_to_serv(int sockfd){
+    int check_status = 0;
+    char dir_name[MAXLINE], buf[BUFFER_SIZE];
+    memset(buf, 0x00, BUFFER_SIZE);
+    printf("생성할 디렉토리의 이름을 입력해주세요 :");
+    if(fgets(dir_name, sizeof(dir_name), stdin) == NULL){
+        printf("입력 오류!\n");
+        return -1;
+    }
+    
+    dir_name[strcspn(dir_name, "\n")] = 0;  // 엔터 제거
+
+    //printf("dir_name: %s\n", dir_name);//확인용
+    if(strlen(dir_name) == 0){
+        printf("디렉토리의 이름이 비어있습니다. 다시 입력해주세요.\n");
+        return -1;
+    }
+    strcpy(buf, "mkdir ");  //명령어
+    strcat(buf, dir_name);  //명령어 + 디렉토리명 (가운데 띄어쓰기로 구분)
+    
+    send(sockfd, buf, BUFFER_SIZE, 0);//명령어 전송
+
+    recv(sockfd, &check_status, sizeof(int), 0); //서버에 입력한 파일이 있는지 확인
+
+    if(check_status == 0){
+        printf("입력하신 디렉토리명이 이미 존재합니다.\n\n");
+        return -1;
+    }else if(check_status == 1){
+        printf("%s 디렉토리 생성완료\n\n", dir_name);
+    }else{
+         printf("오류발생 디랙토리 생성 실패\n");
+    }
+    return 1;
+}
 
 //파일 업로드 fail test 
 int put_file_test(int sockfd){
@@ -518,26 +609,4 @@ int get_file_test(int sockfd, EVP_PKEY *pub_key){
     send(sockfd, &success, sizeof(int), 0);		//write 성공 여부를 client 송신
 
     return 1;
-}
-
-int ls(int sockfd, char *buffer){
-    char filename[MAXLINE];
-    int status = 0;
-
-    send(sockfd, buffer, BUFFER_SIZE, 0);
-
-    while(1){
-        
-        recv(sockfd, &status, sizeof(int), 0);
-        if(!status){ //ls로 출력할 파일명이 더 없으면 while문 break
-            break;
-
-        }
-        ssize_t n = recv(sockfd, filename, sizeof(filename), 0);
-        filename[n] = '\0';
-        printf("%s\n", filename);
-
-    }
-    
-    return 0;
 }
