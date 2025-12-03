@@ -5,7 +5,7 @@ int is_dir(const char *path);
 
 int change_dir(int clnt_sock, client_t *clnt_info){ //cd
     char buf[CWD_LEN], target[MAXLINE], new_path[1024];
-    char root_dir[CWD_LEN] = "/home/chj7138/capstone/2025-capstone-digital-signature/server/file";
+    char root_dir[CWD_LEN] = "/home/pi/workspace/2025-capstone-digital-signature/server/file";
     int status = 0;
     memset(buf, 0x00, CWD_LEN);
     memset(new_path, 0x00, 1024);
